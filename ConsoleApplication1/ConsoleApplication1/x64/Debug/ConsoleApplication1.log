@@ -1,0 +1,6 @@
+﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(517,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
+  ConsoleApplication1.cpp
+D:\OpenGL\ConsoleApplication1\ConsoleApplication1\Common\includes\GLFW\glfw3.h(3235,1): warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+  (compiling source file 'Source/ConsoleApplication1.cpp')
+  
+  ConsoleApplication1.vcxproj -> D:\OpenGL\ConsoleApplication1\ConsoleApplication1\bin\ConsoleApplication1.exe
