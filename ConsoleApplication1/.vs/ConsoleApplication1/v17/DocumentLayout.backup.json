@@ -3,8 +3,8 @@
   "WorkspaceRootPath": "D:\\OpenGL\\ConsoleApplication1\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{66333B4E-C4C7-4ECB-B9C8-21FBABA51301}|ConsoleApplication1\\ConsoleApplication1.vcxproj|D:\\OpenGL\\ConsoleApplication1\\ConsoleApplication1\\Source\\ConsoleApplication1.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{66333B4E-C4C7-4ECB-B9C8-21FBABA51301}|ConsoleApplication1\\ConsoleApplication1.vcxproj|solutionrelative:ConsoleApplication1\\Source\\ConsoleApplication1.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{66333B4E-C4C7-4ECB-B9C8-21FBABA51301}|ConsoleApplication1\\ConsoleApplication1.vcxproj|D:\\OpenGL\\ConsoleApplication1\\ConsoleApplication1\\Source\\Main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{66333B4E-C4C7-4ECB-B9C8-21FBABA51301}|ConsoleApplication1\\ConsoleApplication1.vcxproj|solutionrelative:ConsoleApplication1\\Source\\Main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
   "DocumentGroupContainers": [
@@ -23,12 +23,12 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "ConsoleApplication1.cpp",
-              "DocumentMoniker": "D:\\OpenGL\\ConsoleApplication1\\ConsoleApplication1\\Source\\ConsoleApplication1.cpp",
-              "RelativeDocumentMoniker": "ConsoleApplication1\\Source\\ConsoleApplication1.cpp",
-              "ToolTip": "D:\\OpenGL\\ConsoleApplication1\\ConsoleApplication1\\Source\\ConsoleApplication1.cpp",
-              "RelativeToolTip": "ConsoleApplication1\\Source\\ConsoleApplication1.cpp",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAoAAAAtAAAAAAAAAA==",
+              "Title": "Main.cpp",
+              "DocumentMoniker": "D:\\OpenGL\\ConsoleApplication1\\ConsoleApplication1\\Source\\Main.cpp",
+              "RelativeDocumentMoniker": "ConsoleApplication1\\Source\\Main.cpp",
+              "ToolTip": "D:\\OpenGL\\ConsoleApplication1\\ConsoleApplication1\\Source\\Main.cpp",
+              "RelativeToolTip": "ConsoleApplication1\\Source\\Main.cpp",
+              "ViewState": "AgIAAH4AAAAAAAAAAAAAAJQAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-06-10T14:15:01.324Z",
               "EditorCaption": ""
