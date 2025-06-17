@@ -1,2 +1,7 @@
 # OpenGL
 
+#### Color Triangle
+![ColorTriangle](https://github.com/user-attachments/assets/d1e0e486-8bda-40e2-9ddc-a8964f44c149)
+
+#### Wireframe Rectangle
+![WireframeRectangle](https://github.com/user-attachments/assets/c36384aa-a044-4b07-b5db-21cf26dddddd)
