@@ -12,5 +12,5 @@
 #### Texture Mapping
 ![TextureMapping](https://github.com/user-attachments/assets/5d7ac01f-1d15-4eaf-a2c0-3688ecb09670)
 
-#### Texture Mapping
+#### Rotating Box
 ![RotatingBox](https://github.com/user-attachments/assets/f07fdb32-3be5-4614-9676-8f2b12c9d134)
