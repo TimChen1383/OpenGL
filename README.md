@@ -8,3 +8,6 @@
 
 #### Moving Shader
 ![MovingShader](https://github.com/user-attachments/assets/9d7ca6e9-14b0-40d0-b528-587d3e01cea7)
+
+#### Texture Mapping
+![TextureMapping](https://github.com/user-attachments/assets/5d7ac01f-1d15-4eaf-a2c0-3688ecb09670)
