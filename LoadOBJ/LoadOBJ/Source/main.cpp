@@ -18,10 +18,7 @@ const char* APP_Title = "OpenGL Application";
 int gWindowWidth = 1024;
 int gWindowHeight = 768;
 GLFWwindow* gwindow = NULL;
-
-
-//Create custom FPS camera
-FPSCamera fpsCamera(glm::vec3(0.0f, 0.0f, 5.0f)); // Initial position and orientation
+FPSCamera fpsCamera(glm::vec3(0.0f, 5.0f, 5.0f)); // Initial position and orientation
 const double ZOOM_SENSITIVITY = -3.0f;
 const float MOVE_SPEED = 5.0f;
 const float MOUSE_SENSITIVITY = 0.25f; // Mouse sensitivity for camera rotation
@@ -34,7 +31,6 @@ void glfw_onMouseScroll(GLFWwindow* window, double deltaX, double deltaY);
 void update(double elapsedTime);
 void showFPS(GLFWwindow* window);
 bool InitOpenGL();
-
 
 int main()
 {
@@ -52,28 +48,35 @@ int main()
 	
 	//Model Positions
 	glm::vec3 modelPos[] = {
-		glm::vec3(0.0f, 0.0f, 0.0f),  //model1
-		glm::vec3(2.5f, 0.0f, 0.0f),  //model2
-
+		glm::vec3(0.0f, 0.0f, 0.0f),  //RubberToy
+		glm::vec3(3.0f, 0.0f, 0.0f),  //Suzan
+		glm::vec3(6.0f, 0.0f, 0.0f),  //Teapot
+		glm::vec3(0.0f, 0.0f, 0.0f),  //GroundPlane
 	};
 
 	glm::vec3 modelScale[] = {
-		glm::vec3(1.0f, 1.0f, 1.0f),  //model1
-		glm::vec3(1.0f, 1.0f, 1.0f),  //model2
+		glm::vec3(1.0f, 1.0f, 1.0f),  //RubberToy
+		glm::vec3(1.0f, 1.0f, 1.0f),  //Suzan
+		glm::vec3(1.0f, 1.0f, 1.0f),  //Teapot
+		glm::vec3(1.0f, 1.0f, 1.0f),  //GroundPlane
 	};
 
 	
 	//Load meshes and textures
 	//Use our custom Mesh and Texture class array
-	const int numModels = 2;
+	const int numModels = 4;
 	Mesh mesh[numModels];
 	Texture2D texture[numModels];
 
-	mesh[0].loadOBJ("Model1.obj");
-	mesh[1].loadOBJ("Model2.obj");
+	mesh[0].loadOBJ("RubberToy.obj");
+	mesh[1].loadOBJ("Suzan.obj");
+	mesh[2].loadOBJ("Teapot.obj");
+	mesh[3].loadOBJ("GroundPlane.obj");
 	
-	texture[0].loadTexture("Texture1.jpg", true);
-	texture[1].loadTexture("Texture2.jpg", true);
+	texture[0].loadTexture("Grass.jpg", true);
+	texture[1].loadTexture("Rusted.jpg", true);
+	texture[2].loadTexture("Brick.jpg", true);
+	texture[3].loadTexture("Concrete.jpg", true);
 	
 	double lastFrameTime = glfwGetTime();
 	
@@ -115,8 +118,8 @@ int main()
 		{
 			//Set the model matrix for each model
 			model = glm::mat4(1.0f);
-			model = glm::translate(glm::mat4(1.0f), modelPos[i]);
-			model = glm::scale(glm::mat4(1.0f), modelScale[i]); 
+
+			model = glm::scale(glm::mat4(1.0f), modelScale[i]) * glm::translate(glm::mat4(1.0f), modelPos[i]);
 			shaderProgram.setUniform("model", model); // Set the model matrix in the shader
 			
 			texture[i].bindTexture(0); // Bind the texture for this model
