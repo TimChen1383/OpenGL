@@ -37,16 +37,21 @@ bool Mesh::loadOBJ(const std::string& filename)
         std::string lineBuffer; // temporary string to hold each line read from the file
         while (std::getline(fin, lineBuffer)) // reading line by line in the file
         {
+            std::stringstream ss(lineBuffer); //Each line create a string stream to manipulate strings
+            std::string cmd; // temporary string for processing
+            ss >> cmd; // The "first word" in the line is extracted into the cmd variable
+            
             //checking every line and see if it includes the vertex position, texture coordinate or face
-            if (lineBuffer.substr(0,2) == "v ") 
+            if (cmd == "v") 
             {
-                std::istringstream v(lineBuffer.substr(2));
-                //store the vertex data from the file
-                glm::vec3 vertex; 
-                v >> vertex.x; v >> vertex.y; v >> vertex.z;
+                glm::vec3 vertex;
+                int dim = 0;
+                while (dim < 3 && ss >> vertex[dim]) // read 3 floats for vertex position and store them
+                    dim++;
+
                 tempVertices.push_back(vertex);
             }
-            else if (lineBuffer.substr(0,2) == "vt") // looking for Texture coordinate
+            else if (cmd == "vt") 
             {
                 std::istringstream vt(lineBuffer.substr(3));
                 //store the uv data from the file
