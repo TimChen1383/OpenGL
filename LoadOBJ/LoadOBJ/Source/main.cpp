@@ -49,8 +49,6 @@ int main()
 	ShaderProgram shaderProgram;
 	// Load shaders from files. Text file
 	shaderProgram.loadShaders("Basic.vert", "Basic.frag"); 
-
-	glDisable(GL_CULL_FACE);
 	
 	//Model Positions
 	glm::vec3 modelPos[] = {
@@ -60,8 +58,8 @@ int main()
 	};
 
 	glm::vec3 modelScale[] = {
-		glm::vec3(0.01f, 0.01f, 0.01f),  //model1
-		glm::vec3(0.01f, 0.01f, 0.01f),  //model2
+		glm::vec3(1.0f, 1.0f, 1.0f),  //model1
+		glm::vec3(1.0f, 1.0f, 1.0f),  //model2
 	};
 
 	
@@ -116,8 +114,9 @@ int main()
 		for (int i=0; i < numModels; i++)
 		{
 			//Set the model matrix for each model
-			model = glm::translate(glm::mat4(), modelPos[i]);
-			model = glm::scale(glm::mat4(), modelScale[i]); 
+			model = glm::mat4(1.0f);
+			model = glm::translate(glm::mat4(1.0f), modelPos[i]);
+			model = glm::scale(glm::mat4(1.0f), modelScale[i]); 
 			shaderProgram.setUniform("model", model); // Set the model matrix in the shader
 			
 			texture[i].bindTexture(0); // Bind the texture for this model

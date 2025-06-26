@@ -17,9 +17,10 @@ Mesh::~Mesh()
 bool Mesh::loadOBJ(const std::string& filename)
 {
     //temporary container when we are reading the file
+    std::vector<unsigned int> vertexIndices, uvIndices;
     std::vector<glm::vec3> tempVertices;
     std::vector<glm::vec2> tempUVs;
-    std::vector<unsigned int> vertexIndices, uvIndices;
+
 
     if (filename.find(".obj") != std::string::npos)
     {
