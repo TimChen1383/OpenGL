@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>D:\OpenGL\Lighting\Lighting\bin\Lighting.exe</FullPath>
+      <FullPath>D:\GitHub\OpenGL\Lighting\Lighting\bin\Lighting.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

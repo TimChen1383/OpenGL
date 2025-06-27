@@ -4,8 +4,11 @@
 //The position data is stored inside the first vertex attribute array slot(0)
 layout(location = 0) in vec3 pos;
 
-//The UV data is stored inside the second vertex attribute array slot(1)
-layout(location = 1) in vec2 texCoord;
+//Normal data
+layout(location = 1) in vec3 normal;
+
+//The UV data is stored inside the second vertex attribute array slot(2)
+layout(location = 2) in vec2 texCoord;
 
 uniform mat4 model; //Model matrix for object
 uniform mat4 view;  //View matrix for camera

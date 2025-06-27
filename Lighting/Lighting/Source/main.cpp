@@ -22,6 +22,8 @@ FPSCamera fpsCamera(glm::vec3(0.0f, 5.0f, 5.0f)); // Initial position and orient
 const double ZOOM_SENSITIVITY = -3.0f;
 const float MOVE_SPEED = 5.0f;
 const float MOUSE_SENSITIVITY = 0.25f; // Mouse sensitivity for camera rotation
+float angle = 0.0f;
+float lightSpeed = 50.0f;
 
 //Custom Functions
 void glfw_OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -41,10 +43,13 @@ int main()
 		return -1;
 	}
 	
-	//use our custom Shader class
-	ShaderProgram shaderProgram;
-	// Load shaders from files. Text file
-	shaderProgram.loadShaders("Basic.vert", "Basic.frag"); 
+	//for light bulb
+	ShaderProgram LightShader;
+	LightShader.loadShaders("Light.vert", "Light.frag"); 
+	
+	//for lighting objects
+	ShaderProgram LightingShader;
+	LightingShader.loadShaders("Basic.vert", "Basic.frag");
 	
 	//Model Positions
 	glm::vec3 modelPos[] = {
@@ -67,7 +72,7 @@ int main()
 	const int numModels = 4;
 	Mesh mesh[numModels];
 	Texture2D texture[numModels];
-
+	
 	mesh[0].loadOBJ("RubberToy.obj");
 	mesh[1].loadOBJ("Suzan.obj");
 	mesh[2].loadOBJ("Teapot.obj");
@@ -77,6 +82,11 @@ int main()
 	texture[1].loadTexture("Rusted.jpg", true);
 	texture[2].loadTexture("Brick.jpg", true);
 	texture[3].loadTexture("Concrete.jpg", true);
+
+	
+	Mesh lightMesh;
+	lightMesh.loadOBJ("light.obj");
+	
 	
 	double lastFrameTime = glfwGetTime();
 	
@@ -106,27 +116,45 @@ int main()
 		//Projection Matrix
 		projection = glm::mat4(1.0f); 
 		projection = glm::perspective(glm::radians(fpsCamera.getFOV()), (float)gWindowWidth / (float)gWindowHeight, 0.1f, 100.0f);
+
+		//Add light
+		glm::vec3 lightPos(0.0f, 1.0f, 10.0f);
+		glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+
+		//Move the light
+		angle += (float)deltaTime * lightSpeed;
+		lightPos.x = 8.0f * sinf(glm::radians(angle));
 		
-		shaderProgram.use();
+		LightingShader.use();
 		
 		//Pass the matrices to the shader files
-		shaderProgram.setUniform("view", view);
-		shaderProgram.setUniform("projection", projection);
-
-
-		for (int i=0; i < numModels; i++)
+		LightingShader.setUniform("view", view);
+		LightingShader.setUniform("projection", projection);
+		
+		//Render the scene
+		for (int i = 0; i < numModels; i++)
 		{
 			//Set the model matrix for each model
 			model = glm::mat4(1.0f);
 
 			model = glm::scale(glm::mat4(1.0f), modelScale[i]) * glm::translate(glm::mat4(1.0f), modelPos[i]);
-			shaderProgram.setUniform("model", model); // Set the model matrix in the shader
+			LightingShader.setUniform("model", model); // Set the model matrix in the shader
 			
 			texture[i].bindTexture(0); // Bind the texture for this model
 			mesh[i].draw(); // Draw the mesh
 			texture[i].unbindTexture(0); // Unbind the texture after drawing
 		}
-		shaderProgram.setUniform("model", model);
+
+		
+		//Render the light
+		model = glm::translate(glm::mat4(1.0f), lightPos);
+		LightShader.use();
+		LightShader.setUniform("model", model);
+		LightShader.setUniform("view", view);
+		LightShader.setUniform("projection", projection);
+		LightShader.setUniform("lightColor", lightColor);
+		lightMesh.draw();
+		
 		
 		// Swap buffers. The order is very important
 		glfwSwapBuffers(gwindow); // Swap buffers to display the rendered content
