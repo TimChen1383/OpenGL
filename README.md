@@ -23,3 +23,7 @@
 
 #### Load OBJ
 ![LoadOBJ](https://github.com/user-attachments/assets/726b15dd-899c-4bf5-bc5c-40d9a518ccd4)
+
+#### Lighting
+![Lighting](https://github.com/user-attachments/assets/b50b8540-b195-4e04-b0d7-5b7f8f9f7681)
+
