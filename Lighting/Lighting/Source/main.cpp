@@ -23,7 +23,7 @@ const double ZOOM_SENSITIVITY = -3.0f;
 const float MOVE_SPEED = 5.0f;
 const float MOUSE_SENSITIVITY = 0.25f; // Mouse sensitivity for camera rotation
 float angle = 0.0f;
-float lightSpeed = 50.0f;
+glm::vec2 groundUVScale =glm::vec2(20.0f,20.0f); // Texture UV scale
 
 //Custom Functions
 void glfw_OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -42,6 +42,9 @@ int main()
 		std::cerr << "OpenGL initialization failed." << std::endl;
 		return -1;
 	}
+
+	// Disable VSync for uncapped FPS
+	glfwSwapInterval(0); 
 	
 	//for light bulb
 	ShaderProgram LightShader;
@@ -49,44 +52,63 @@ int main()
 	
 	//for lighting objects
 	ShaderProgram LightingShader;
-	LightingShader.loadShaders("Basic.vert", "Basic.frag");
+	LightingShader.loadShaders("Lighting.vert", "Lighting.frag");
+
+	//for ground plane
+	ShaderProgram GroundShader;
+	GroundShader.loadShaders("Ground.vert", "Ground.frag");
 	
 	//Model Positions
 	glm::vec3 modelPos[] = {
 		glm::vec3(0.0f, 0.0f, 0.0f),  //RubberToy
 		glm::vec3(3.0f, 0.0f, 0.0f),  //Suzan
-		glm::vec3(6.0f, 0.0f, 0.0f),  //Teapot
-		glm::vec3(0.0f, 0.0f, 0.0f),  //GroundPlane
+		glm::vec3(-3.0f, 0.0f, 0.0f),  //Teapot
 	};
 
 	glm::vec3 modelScale[] = {
 		glm::vec3(1.0f, 1.0f, 1.0f),  //RubberToy
 		glm::vec3(1.0f, 1.0f, 1.0f),  //Suzan
 		glm::vec3(1.0f, 1.0f, 1.0f),  //Teapot
-		glm::vec3(1.0f, 1.0f, 1.0f),  //GroundPlane
 	};
 
+	//Add ground plane
+	glm::vec3 GroundPos = glm::vec3(0.0f, 0.0f, 0.0f); // Position for the ground plane
+	glm::vec3 GroundScale = glm::vec3(5.0f, 5.0f, 5.0f);
+
+	//Add light
+	glm::vec3 lightPos(0.0f, 1.0f, 0.0f);
+	glm::vec3 lightColor(1.0f, 0.5f, 0.0f);
+	float lightIntensity = 2.0f;
+	float lightSpeed = 70.0f;
+	lightColor = lightColor * lightIntensity; 
+
+	glm::vec3 lightPos2(0.0f, 1.0f, 0.0f);
+	glm::vec3 lightColor2(1.0f, 1.0f, 1.0f);
+	float angle2 = 0.0f;
+	float lightSpeed2 = 50.0f;
+	//lightColor2 = lightColor2 * lightIntensity; 
 	
 	//Load meshes and textures
 	//Use our custom Mesh and Texture class array
-	const int numModels = 4;
+	const int numModels = 3;
 	Mesh mesh[numModels];
 	Texture2D texture[numModels];
 	
 	mesh[0].loadOBJ("RubberToy.obj");
 	mesh[1].loadOBJ("Suzan.obj");
 	mesh[2].loadOBJ("Teapot.obj");
-	mesh[3].loadOBJ("GroundPlane.obj");
 	
-	texture[0].loadTexture("Grass.jpg", true);
-	texture[1].loadTexture("Rusted.jpg", true);
-	texture[2].loadTexture("Brick.jpg", true);
-	texture[3].loadTexture("Concrete.jpg", true);
+	texture[0].loadTexture("Pattern1.jpg", true);
+	texture[1].loadTexture("Pattern2.jpg", true);
+	texture[2].loadTexture("Pattern3.jpg", true);
 
+	Mesh groundMesh;
+	groundMesh.loadOBJ("GroundPlane.obj");
+	Texture2D textureGround;
+	textureGround.loadTexture("Brick.jpg", true); 
 	
 	Mesh lightMesh;
 	lightMesh.loadOBJ("light.obj");
-	
 	
 	double lastFrameTime = glfwGetTime();
 	
@@ -117,21 +139,31 @@ int main()
 		projection = glm::mat4(1.0f); 
 		projection = glm::perspective(glm::radians(fpsCamera.getFOV()), (float)gWindowWidth / (float)gWindowHeight, 0.1f, 100.0f);
 
-		//Add light
-		glm::vec3 lightPos(0.0f, 1.0f, 10.0f);
-		glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
-
-		//Move the light
+		//Camera view position
+		glm::vec3 viewPos = fpsCamera.getPosition();
+		
+		
+		// Animate the first light (line-direction)
 		angle += (float)deltaTime * lightSpeed;
-		lightPos.x = 8.0f * sinf(glm::radians(angle));
+		lightPos.x = 7.0f * sinf(glm::radians(angle2));
+		lightPos.z = 7.0f * cosf(glm::radians(angle2));
+
+		// Animate the second light (circle-direction)
+		angle2 += (float)deltaTime * lightSpeed2;
+		lightPos2.x = 5.0f * cosf(glm::radians(angle2));
+		lightPos2.z = 5.0f * sinf(glm::radians(angle2));
 		
+		//Render meshes
 		LightingShader.use();
-		
-		//Pass the matrices to the shader files
 		LightingShader.setUniform("view", view);
 		LightingShader.setUniform("projection", projection);
+		LightingShader.setUniform("viewPos", viewPos);
+		LightingShader.setUniform("lightColor1", lightColor);
+		LightingShader.setUniform("lightPosition1", lightPos);
+		LightingShader.setUniform("lightColor2", lightColor2);
+		LightingShader.setUniform("lightPosition2", lightPos2);
+
 		
-		//Render the scene
 		for (int i = 0; i < numModels; i++)
 		{
 			//Set the model matrix for each model
@@ -144,9 +176,25 @@ int main()
 			mesh[i].draw(); // Draw the mesh
 			texture[i].unbindTexture(0); // Unbind the texture after drawing
 		}
+		
+		//Render the ground plane
+		model =  glm::scale(glm::mat4(1.0f), GroundScale) * glm::translate(glm::mat4(1.0f), GroundPos);
+		GroundShader.use();
+		GroundShader.setUniform("model", model);
+		GroundShader.setUniform("view", view);
+		GroundShader.setUniform("projection", projection);
+		GroundShader.setUniform("viewPos", viewPos);
+		GroundShader.setUniform("groundUVScale", groundUVScale);
+		GroundShader.setUniform("lightColor1", lightColor);
+		GroundShader.setUniform("lightPosition1", lightPos);
+		GroundShader.setUniform("lightColor2", lightColor2);
+		GroundShader.setUniform("lightPosition2", lightPos2);
+		textureGround.bindTexture(0);
+		groundMesh.draw();
+		textureGround.unbindTexture(0); 
 
 		
-		//Render the light
+		//Render the first light
 		model = glm::translate(glm::mat4(1.0f), lightPos);
 		LightShader.use();
 		LightShader.setUniform("model", model);
@@ -154,7 +202,15 @@ int main()
 		LightShader.setUniform("projection", projection);
 		LightShader.setUniform("lightColor", lightColor);
 		lightMesh.draw();
-		
+
+		// Render second light
+		model = glm::translate(glm::mat4(1.0f), lightPos2);
+		LightShader.use();
+		LightShader.setUniform("model", model);
+		LightShader.setUniform("view", view);
+		LightShader.setUniform("projection", projection);
+		LightShader.setUniform("lightColor", lightColor2);
+		lightMesh.draw();
 		
 		// Swap buffers. The order is very important
 		glfwSwapBuffers(gwindow); // Swap buffers to display the rendered content
@@ -264,13 +320,12 @@ void update(double elapsedTime)
 	else if (glfwGetKey(gwindow, GLFW_KEY_D) == GLFW_PRESS)
 		fpsCamera.move(MOVE_SPEED * (float)elapsedTime * fpsCamera.getRight());
 
-	if (glfwGetKey(gwindow, GLFW_KEY_Z) == GLFW_PRESS)
+	if (glfwGetKey(gwindow, GLFW_KEY_E) == GLFW_PRESS)
 		fpsCamera.move(MOVE_SPEED * (float)elapsedTime * fpsCamera.getUp());
-	else if (glfwGetKey(gwindow, GLFW_KEY_X) == GLFW_PRESS)
+	else if (glfwGetKey(gwindow, GLFW_KEY_R) == GLFW_PRESS)
 		fpsCamera.move(MOVE_SPEED * (float)elapsedTime * -fpsCamera.getUp());
 	
 }
-
 void showFPS(GLFWwindow* window)
 {
 	static double previousSeconds = 0.0;

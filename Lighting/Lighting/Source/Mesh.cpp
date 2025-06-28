@@ -151,10 +151,8 @@ bool Mesh::loadOBJ(const std::string& filename)
             }
             mVertices.push_back(meshVertex);
         }
-
-        std::cout << "Fine Here 2" << std::endl;
+        
         initBuffer();
-        std::cout << "Fine Here 3" << std::endl;
         return (mLoaded = true);
         
     }
