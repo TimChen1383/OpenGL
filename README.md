@@ -1,4 +1,6 @@
 # OpenGL
+#### Shadow
+![Shadow](https://github.com/user-attachments/assets/0c26bcbe-b867-4c80-93eb-9be53ed682e9)
 
 #### Spotlight(flashlight)
 ![Spotlight](https://github.com/user-attachments/assets/7cf7387f-a368-4c81-89aa-8a695240c2d5)
