@@ -19,7 +19,7 @@
 #include "PhysicsManager.h"
 
 //Global variables
-const char* APP_Title = "OpenGL PhysX Demo";
+const char* APP_Title = "OpenGL Engine";
 int gWindowWidth = 1024;
 int gWindowHeight = 768;
 GLFWwindow* gwindow = NULL;
