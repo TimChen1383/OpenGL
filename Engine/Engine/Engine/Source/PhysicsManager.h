@@ -35,6 +35,18 @@ public:
     // Check if physics is initialized
     bool isInitialized() const { return mIsInitialized; }
 
+    // Clear all dynamic actors (reset scene)
+    void clearDynamicActors();
+
+    // Set gravity
+    void setGravity(const glm::vec3& gravity);
+
+    // Get current gravity
+    glm::vec3 getGravity() const;
+
+    // Get collision box half-extents for an actor (for debug rendering)
+    bool getActorBoxHalfExtents(PxRigidActor* actor, glm::vec3& outHalfExtents) const;
+
 private:
     PxDefaultAllocator mAllocator;
     PxDefaultErrorCallback mErrorCallback;

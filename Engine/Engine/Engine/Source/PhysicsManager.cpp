@@ -141,3 +141,57 @@ glm::mat4 PhysicsManager::getActorTransform(PxRigidActor* actor)
 
     return result;
 }
+
+void PhysicsManager::clearDynamicActors()
+{
+    if (!mIsInitialized || !mScene) return;
+
+    // Remove all dynamic actors from scene
+    for (PxRigidDynamic* actor : mDynamicActors)
+    {
+        if (actor)
+        {
+            mScene->removeActor(*actor);
+            actor->release();
+        }
+    }
+    mDynamicActors.clear();
+
+    std::cout << "Physics scene cleared." << std::endl;
+}
+
+void PhysicsManager::setGravity(const glm::vec3& gravity)
+{
+    if (!mIsInitialized || !mScene) return;
+
+    mScene->setGravity(PxVec3(gravity.x, gravity.y, gravity.z));
+}
+
+glm::vec3 PhysicsManager::getGravity() const
+{
+    if (!mIsInitialized || !mScene) return glm::vec3(0.0f, -9.81f, 0.0f);
+
+    PxVec3 g = mScene->getGravity();
+    return glm::vec3(g.x, g.y, g.z);
+}
+
+bool PhysicsManager::getActorBoxHalfExtents(PxRigidActor* actor, glm::vec3& outHalfExtents) const
+{
+    if (!actor) return false;
+
+    // Get the first shape from the actor
+    PxShape* shapes[1];
+    if (actor->getShapes(shapes, 1) > 0)
+    {
+        PxShape* shape = shapes[0];
+        PxGeometryHolder geomHolder = shape->getGeometry();
+
+        if (geomHolder.getType() == PxGeometryType::eBOX)
+        {
+            const PxBoxGeometry& boxGeom = geomHolder.box();
+            outHalfExtents = glm::vec3(boxGeom.halfExtents.x, boxGeom.halfExtents.y, boxGeom.halfExtents.z);
+            return true;
+        }
+    }
+    return false;
+}

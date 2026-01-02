@@ -10,6 +10,15 @@ D:\GitHub\OpenGL\Engine\Engine\Engine\Source\Mesh.cpp(169,49): warning C4267: 'a
   PhysicsManager.cpp
   ShaderProgram.cpp
   Texture2D.cpp
+  imgui.cpp
+  imgui_draw.cpp
+  imgui_tables.cpp
+  imgui_widgets.cpp
+  imgui_impl_glfw.cpp
+D:\GitHub\OpenGL\Engine\Engine\Engine\Common\includes\GLFW\glfw3.h(3173,1): warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+  (compiling source file 'Source/imgui/backends/imgui_impl_glfw.cpp')
+  
+  imgui_impl_opengl3.cpp
   Generating Code...
 glew32s.lib(glew.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'glew32s.lib(glew.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\vc120.pdb'; linking object as if no debug info
 PhysXExtensions_static_64.lib(ExtDefaultSimulationFilterShader.obj) : warning LNK4099: PDB 'PhysXExtensions_static_64.pdb' was not found with 'PhysXExtensions_static_64.lib(ExtDefaultSimulationFilterShader.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\PhysXExtensions_static_64.pdb'; linking object as if no debug info

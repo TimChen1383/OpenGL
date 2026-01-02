@@ -8,6 +8,10 @@
 #include "GLFW/glfw3.h"
 #include "glm/gtc/matrix_transform.hpp"
 
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+
 #include "ShaderProgram.h"
 #include "Texture2D.h"
 #include "Camera.h"
@@ -25,9 +29,24 @@ const float MOVE_SPEED = 5.0f;
 const float MOUSE_SENSITIVITY = 0.25f; // Mouse sensitivity for camera rotation
 glm::vec2 groundUVScale = glm::vec2(20.0f, 20.0f); // Texture UV scale
 
-// Static directional light direction (pointing down and slightly angled)
-const glm::vec3 DIRECTIONAL_LIGHT_DIR = glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f));
-const glm::vec3 DIRECTIONAL_LIGHT_COLOR = glm::vec3(0.8f, 0.8f, 0.7f);
+// Directional light settings (controllable via ImGui)
+glm::vec3 gDirLightDirection = glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f));
+glm::vec3 gDirLightColor = glm::vec3(0.8f, 0.8f, 0.7f);
+float gDirLightIntensity = 1.0f;
+float gDirLightYaw = -30.0f;    // Horizontal rotation in degrees
+float gDirLightPitch = -60.0f;  // Vertical rotation in degrees (negative = pointing down)
+
+// UI state
+bool gShowUI = true;           // Toggle UI visibility with Tab key
+bool gCameraEnabled = true;    // Toggle camera control
+
+// Physics UI controls
+bool gShowCollisionMesh = false;  // Toggle collision mesh wireframe
+glm::vec3 gGravity = glm::vec3(0.0f, -9.81f, 0.0f);  // Gravity vector
+
+// Debug wireframe rendering
+unsigned int gWireframeCubeVAO = 0;
+unsigned int gWireframeCubeVBO = 0;
 
 // Shadow mapping variables
 const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
@@ -50,11 +69,18 @@ const glm::vec3 TEAPOT_HALF_EXTENTS(0.8f, 0.5f, 0.5f);
 //Custom Functions
 void glfw_OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
 void glfw_OnFrameBufferSize(GLFWwindow* window, int width, int height); //update the viewport when the window is resized
-void glfw_onMouseMove(GLFWwindow* window, double posX, double posY); 
+void glfw_onMouseMove(GLFWwindow* window, double posX, double posY);
 void glfw_onMouseScroll(GLFWwindow* window, double deltaX, double deltaY);
 void update(double elapsedTime);
 void showFPS(GLFWwindow* window);
 bool InitOpenGL();
+void InitImGui();
+void ShutdownImGui();
+void UpdateLightDirection();
+void RenderImGuiUI();
+void InitWireframeCube();
+void DrawWireframeCube(ShaderProgram& shader, const glm::mat4& model, const glm::vec3& halfExtents);
+void CleanupWireframeCube();
 
 int main()
 {
@@ -64,6 +90,9 @@ int main()
 		std::cerr << "OpenGL initialization failed." << std::endl;
 		return -1;
 	}
+
+	// Initialize ImGui
+	InitImGui();
 
 	// Disable VSync for uncapped FPS
 	glfwSwapInterval(0);
@@ -79,6 +108,13 @@ int main()
 	//for shadow mapping
 	ShaderProgram ShadowMapShader;
 	ShadowMapShader.loadShaders("ShadowMap.vert", "ShadowMap.frag");
+
+	//for wireframe collision mesh
+	ShaderProgram WireframeShader;
+	WireframeShader.loadShaders("Wireframe.vert", "Wireframe.frag");
+
+	// Initialize wireframe cube mesh
+	InitWireframeCube();
 
 	std::cout << "Shadow map resolution: " << SHADOW_WIDTH << "x" << SHADOW_HEIGHT << std::endl;
 
@@ -118,13 +154,11 @@ int main()
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	// Calculate static directional light space matrix (only needs to be done once)
+	// Shadow map projection settings (light space matrix calculated per-frame)
 	float dirNear = 1.0f, dirFar = 50.0f;
 	float dirSize = 20.0f;
 	glm::mat4 dirLightProjection = glm::ortho(-dirSize, dirSize, -dirSize, dirSize, dirNear, dirFar);
-	glm::vec3 dirLightPos = -DIRECTIONAL_LIGHT_DIR * 20.0f;
-	glm::mat4 dirLightView = glm::lookAt(dirLightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	glm::mat4 dirLightSpaceMatrix = dirLightProjection * dirLightView;
+	glm::mat4 dirLightSpaceMatrix;
 
 	// Initialize PhysX
 	if (!gPhysicsManager.init())
@@ -171,6 +205,15 @@ int main()
 		projection = glm::perspective(glm::radians(fpsCamera.getFOV()), (float)gWindowWidth / (float)gWindowHeight, 0.1f, 100.0f);
 		glm::vec3 viewPos = fpsCamera.getPosition();
 
+		// Update light direction from yaw/pitch and recalculate light space matrix
+		UpdateLightDirection();
+		glm::vec3 dirLightPos = -gDirLightDirection * 20.0f;
+		glm::mat4 dirLightView = glm::lookAt(dirLightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		dirLightSpaceMatrix = dirLightProjection * dirLightView;
+
+		// Calculate effective light color with intensity
+		glm::vec3 effectiveLightColor = gDirLightColor * gDirLightIntensity;
+
 		// 1. SHADOW PASS: Render depth from directional light perspective
 		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, dirDepthMapFBO);
@@ -199,8 +242,8 @@ int main()
 		LightingShader.setUniform("view", view);
 		LightingShader.setUniform("projection", projection);
 		LightingShader.setUniform("viewPos", viewPos);
-		LightingShader.setUniform("dirLightDirection", DIRECTIONAL_LIGHT_DIR);
-		LightingShader.setUniform("dirLightColor", DIRECTIONAL_LIGHT_COLOR);
+		LightingShader.setUniform("dirLightDirection", gDirLightDirection);
+		LightingShader.setUniform("dirLightColor", effectiveLightColor);
 		LightingShader.setUniform("dirLightSpaceMatrix", dirLightSpaceMatrix);
 
 		glActiveTexture(GL_TEXTURE1);
@@ -226,8 +269,8 @@ int main()
 		GroundShader.setUniform("projection", projection);
 		GroundShader.setUniform("viewPos", viewPos);
 		GroundShader.setUniform("groundUVScale", groundUVScale);
-		GroundShader.setUniform("dirLightDirection", DIRECTIONAL_LIGHT_DIR);
-		GroundShader.setUniform("dirLightColor", DIRECTIONAL_LIGHT_COLOR);
+		GroundShader.setUniform("dirLightDirection", gDirLightDirection);
+		GroundShader.setUniform("dirLightColor", effectiveLightColor);
 		GroundShader.setUniform("dirLightSpaceMatrix", dirLightSpaceMatrix);
 
 		glActiveTexture(GL_TEXTURE1);
@@ -238,12 +281,46 @@ int main()
 		groundMesh.draw();
 		textureGround.unbindTexture(0);
 
+		// Render collision mesh wireframes if enabled
+		if (gShowCollisionMesh)
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glDisable(GL_CULL_FACE);
+
+			WireframeShader.use();
+			WireframeShader.setUniform("view", view);
+			WireframeShader.setUniform("projection", projection);
+			WireframeShader.setUniform("wireColor", glm::vec3(0.0f, 1.0f, 0.0f)); // Green wireframe
+
+			for (size_t i = 0; i < dynamicActors.size(); i++)
+			{
+				glm::vec3 halfExtents;
+				if (gPhysicsManager.getActorBoxHalfExtents(dynamicActors[i], halfExtents))
+				{
+					model = gPhysicsManager.getActorTransform(dynamicActors[i]);
+					DrawWireframeCube(WireframeShader, model, halfExtents);
+				}
+			}
+
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glEnable(GL_CULL_FACE);
+		}
+
+		// Render ImGui UI
+		RenderImGuiUI();
+
 		glfwSwapBuffers(gwindow);
 		lastFrameTime = currentTime;
 	}
 
+	// Cleanup wireframe resources
+	CleanupWireframeCube();
+
 	// Cleanup physics
 	gPhysicsManager.shutdown();
+
+	// Cleanup ImGui
+	ShutdownImGui();
 
 	glfwTerminate();
 	return 0;
@@ -303,6 +380,25 @@ void glfw_OnKey(GLFWwindow* window, int key, int scancode, int action, int mods)
 		glfwSetWindowShouldClose(window, true);
 	}
 
+	// Toggle UI visibility and camera control with Tab
+	if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
+	{
+		gShowUI = !gShowUI;
+		gCameraEnabled = !gShowUI;
+
+		if (gShowUI)
+		{
+			// Show cursor when UI is visible
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+		else
+		{
+			// Hide and capture cursor when UI is hidden
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			glfwSetCursorPos(window, gWindowWidth / 2.0, gWindowHeight / 2.0);
+		}
+	}
+
 	// Spawn teapots while P key is held
 	if (key == GLFW_KEY_P)
 	{
@@ -342,11 +438,15 @@ void glfw_onMouseScroll(GLFWwindow* window, double deltaX, double deltaY)
 }
 void update(double elapsedTime)
 {
+	// Only update camera when camera control is enabled (UI hidden)
+	if (!gCameraEnabled)
+		return;
+
 	double mouseX, mouseY;
-	
+
 	// Get the current mouse position
 	glfwGetCursorPos(gwindow, &mouseX, &mouseY);
-	
+
 	fpsCamera.rotate((float)(gWindowWidth / 2.0 - mouseX) * MOUSE_SENSITIVITY, (float)(gWindowHeight / 2.0 - mouseY) * MOUSE_SENSITIVITY);
 
 	glfwSetCursorPos(gwindow, gWindowWidth / 2.0, gWindowHeight / 2.0);
@@ -367,7 +467,7 @@ void update(double elapsedTime)
 		fpsCamera.move(MOVE_SPEED * (float)elapsedTime * fpsCamera.getUp());
 	else if (glfwGetKey(gwindow, GLFW_KEY_R) == GLFW_PRESS)
 		fpsCamera.move(MOVE_SPEED * (float)elapsedTime * -fpsCamera.getUp());
-	
+
 }
 void showFPS(GLFWwindow* window)
 {
@@ -395,4 +495,238 @@ void showFPS(GLFWwindow* window)
 		frameCount = 0;
 	}
 	frameCount++;
+}
+
+// Initialize ImGui
+void InitImGui()
+{
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplGlfw_InitForOpenGL(gwindow, true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+
+	std::cout << "ImGui initialized. Press TAB to toggle UI." << std::endl;
+}
+
+// Shutdown ImGui
+void ShutdownImGui()
+{
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+}
+
+// Update light direction from yaw and pitch angles
+void UpdateLightDirection()
+{
+	float yawRad = glm::radians(gDirLightYaw);
+	float pitchRad = glm::radians(gDirLightPitch);
+
+	// Calculate direction from spherical coordinates
+	// Pitch: 0 = horizontal, -90 = straight down, +90 = straight up
+	// Yaw: 0 = +X direction, 90 = +Z direction
+	gDirLightDirection.x = cos(pitchRad) * cos(yawRad);
+	gDirLightDirection.y = sin(pitchRad);
+	gDirLightDirection.z = cos(pitchRad) * sin(yawRad);
+	gDirLightDirection = glm::normalize(gDirLightDirection);
+}
+
+// Render ImGui UI
+void RenderImGuiUI()
+{
+	// Start the Dear ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	if (gShowUI)
+	{
+		// Directional Light Control Window
+		ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(320, 280), ImGuiCond_FirstUseEver);
+
+		ImGui::Begin("Directional Light Controls");
+
+		ImGui::Text("Light Direction");
+		ImGui::Separator();
+
+		// Yaw control (horizontal rotation)
+		ImGui::SliderFloat("Yaw", &gDirLightYaw, -180.0f, 180.0f, "%.1f deg");
+
+		// Pitch control (vertical rotation)
+		ImGui::SliderFloat("Pitch", &gDirLightPitch, -89.0f, 89.0f, "%.1f deg");
+
+		ImGui::Spacing();
+		ImGui::Text("Light Color & Intensity");
+		ImGui::Separator();
+
+		// Light color picker
+		ImGui::ColorEdit3("Color", &gDirLightColor.x);
+
+		// Light intensity slider
+		ImGui::SliderFloat("Intensity", &gDirLightIntensity, 0.0f, 3.0f, "%.2f");
+
+		ImGui::Spacing();
+		ImGui::Separator();
+
+		// Display current direction vector
+		ImGui::Text("Direction: (%.2f, %.2f, %.2f)",
+			gDirLightDirection.x, gDirLightDirection.y, gDirLightDirection.z);
+
+		// Reset button
+		if (ImGui::Button("Reset to Default"))
+		{
+			gDirLightYaw = -30.0f;
+			gDirLightPitch = -60.0f;
+			gDirLightColor = glm::vec3(0.8f, 0.8f, 0.7f);
+			gDirLightIntensity = 1.0f;
+		}
+
+		ImGui::End();
+
+		// Physics Control Window
+		ImGui::SetNextWindowPos(ImVec2(10, 300), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(320, 220), ImGuiCond_FirstUseEver);
+
+		ImGui::Begin("Physics Controls");
+
+		ImGui::Text("Scene Management");
+		ImGui::Separator();
+
+		// Reset Physics Scene button
+		if (ImGui::Button("Reset Physics Scene"))
+		{
+			gPhysicsManager.clearDynamicActors();
+		}
+
+		ImGui::SameLine();
+		ImGui::Text("Objects: %d", (int)gPhysicsManager.getDynamicActors().size());
+
+		ImGui::Spacing();
+		ImGui::Text("Debug Visualization");
+		ImGui::Separator();
+
+		// Show Collision Mesh checkbox
+		ImGui::Checkbox("Show Collision Mesh", &gShowCollisionMesh);
+
+		ImGui::Spacing();
+		ImGui::Text("Gravity");
+		ImGui::Separator();
+
+		// Gravity Y control (most common adjustment)
+		ImGui::SliderFloat("Gravity Y", &gGravity.y, -30.0f, 30.0f, "%.2f m/s^2");
+
+		// Optional: Full gravity vector control
+		if (ImGui::TreeNode("Advanced Gravity"))
+		{
+			ImGui::SliderFloat("Gravity X", &gGravity.x, -20.0f, 20.0f, "%.2f");
+			ImGui::SliderFloat("Gravity Z", &gGravity.z, -20.0f, 20.0f, "%.2f");
+			ImGui::TreePop();
+		}
+
+		// Apply gravity changes
+		gPhysicsManager.setGravity(gGravity);
+
+		// Reset gravity button
+		if (ImGui::Button("Reset Gravity"))
+		{
+			gGravity = glm::vec3(0.0f, -9.81f, 0.0f);
+			gPhysicsManager.setGravity(gGravity);
+		}
+
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Text("Controls:");
+		ImGui::BulletText("TAB - Toggle UI / Camera");
+		ImGui::BulletText("WASD - Move camera");
+		ImGui::BulletText("P - Spawn teapots");
+
+		ImGui::End();
+	}
+
+	// Render ImGui
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+// Initialize wireframe cube mesh (unit cube from -1 to 1)
+void InitWireframeCube()
+{
+	// Unit cube vertices (will be scaled by half-extents in shader)
+	float vertices[] = {
+		// Front face
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		// Back face
+		-1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f
+	};
+
+	// Indices for wireframe lines (12 edges)
+	unsigned int indices[] = {
+		// Front face edges
+		0, 1,  1, 2,  2, 3,  3, 0,
+		// Back face edges
+		4, 5,  5, 6,  6, 7,  7, 4,
+		// Connecting edges
+		0, 4,  1, 5,  2, 6,  3, 7
+	};
+
+	unsigned int EBO;
+	glGenVertexArrays(1, &gWireframeCubeVAO);
+	glGenBuffers(1, &gWireframeCubeVBO);
+	glGenBuffers(1, &EBO);
+
+	glBindVertexArray(gWireframeCubeVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, gWireframeCubeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+}
+
+// Draw wireframe cube with given transform and half-extents
+void DrawWireframeCube(ShaderProgram& shader, const glm::mat4& transform, const glm::vec3& halfExtents)
+{
+	// Scale the unit cube by half-extents
+	glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), halfExtents);
+	glm::mat4 model = transform * scaleMatrix;
+
+	shader.setUniform("model", model);
+
+	glBindVertexArray(gWireframeCubeVAO);
+	glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
+
+// Cleanup wireframe cube resources
+void CleanupWireframeCube()
+{
+	if (gWireframeCubeVAO)
+	{
+		glDeleteVertexArrays(1, &gWireframeCubeVAO);
+		gWireframeCubeVAO = 0;
+	}
+	if (gWireframeCubeVBO)
+	{
+		glDeleteBuffers(1, &gWireframeCubeVBO);
+		gWireframeCubeVBO = 0;
+	}
 }

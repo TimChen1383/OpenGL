@@ -113,7 +113,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>.\Common\includes\;$(ProjectDir)..\PhysX\physx\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\Common\includes\;$(ProjectDir)..\PhysX\physx\include\;.\Source\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -132,7 +132,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>.\Common\includes\;$(ProjectDir)..\PhysX\physx\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\Common\includes\;$(ProjectDir)..\PhysX\physx\include\;.\Source\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -152,6 +152,12 @@
     <ClCompile Include="Source\PhysicsManager.cpp" />
     <ClCompile Include="Source\ShaderProgram.cpp" />
     <ClCompile Include="Source\Texture2D.cpp" />
+    <ClCompile Include="Source\imgui\imgui.cpp" />
+    <ClCompile Include="Source\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Source\imgui\imgui_tables.cpp" />
+    <ClCompile Include="Source\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Source\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Source\imgui\backends\imgui_impl_opengl3.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\includes\GLFW\glfw3.h" />
@@ -592,6 +598,15 @@
     <ClInclude Include="Source\PhysicsManager.h" />
     <ClInclude Include="Source\ShaderProgram.h" />
     <ClInclude Include="Source\Texture2D.h" />
+    <ClInclude Include="Source\imgui\imgui.h" />
+    <ClInclude Include="Source\imgui\imgui_internal.h" />
+    <ClInclude Include="Source\imgui\imconfig.h" />
+    <ClInclude Include="Source\imgui\imstb_rectpack.h" />
+    <ClInclude Include="Source\imgui\imstb_textedit.h" />
+    <ClInclude Include="Source\imgui\imstb_truetype.h" />
+    <ClInclude Include="Source\imgui\backends\imgui_impl_glfw.h" />
+    <ClInclude Include="Source\imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="Source\imgui\backends\imgui_impl_opengl3_loader.h" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Debug\" />
@@ -606,6 +621,8 @@
     <Content Include="bin\Pattern3.jpg" />
     <Content Include="bin\ShadowMap.frag" />
     <Content Include="bin\ShadowMap.vert" />
+    <Content Include="bin\Wireframe.vert" />
+    <Content Include="bin\Wireframe.frag" />
     <Content Include="bin\Teapot.obj" />
     <Content Include="Common\includes\glm\CMakeLists.txt" />
     <Content Include="Common\lib\glew32.lib" />
