@@ -21,6 +21,7 @@ D:\GitHub\OpenGL\Engine\Engine\Engine\Common\includes\GLFW\glfw3.h(3173,1): warn
   imgui_impl_opengl3.cpp
   Generating Code...
 glew32s.lib(glew.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'glew32s.lib(glew.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\vc120.pdb'; linking object as if no debug info
+PhysXExtensions_static_64.lib(ExtDefaultStreams.obj) : warning LNK4099: PDB 'PhysXExtensions_static_64.pdb' was not found with 'PhysXExtensions_static_64.lib(ExtDefaultStreams.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\PhysXExtensions_static_64.pdb'; linking object as if no debug info
 PhysXExtensions_static_64.lib(ExtDefaultSimulationFilterShader.obj) : warning LNK4099: PDB 'PhysXExtensions_static_64.pdb' was not found with 'PhysXExtensions_static_64.lib(ExtDefaultSimulationFilterShader.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\PhysXExtensions_static_64.pdb'; linking object as if no debug info
 PhysXExtensions_static_64.lib(ExtDefaultErrorCallback.obj) : warning LNK4099: PDB 'PhysXExtensions_static_64.pdb' was not found with 'PhysXExtensions_static_64.lib(ExtDefaultErrorCallback.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\PhysXExtensions_static_64.pdb'; linking object as if no debug info
 PhysXExtensions_static_64.lib(ExtDefaultCpuDispatcher.obj) : warning LNK4099: PDB 'PhysXExtensions_static_64.pdb' was not found with 'PhysXExtensions_static_64.lib(ExtDefaultCpuDispatcher.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\PhysXExtensions_static_64.pdb'; linking object as if no debug info

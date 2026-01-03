@@ -1,4 +1,6 @@
 #include "PhysicsManager.h"
+#include "Mesh.h"
+#include "cooking/PxCooking.h"
 #include <iostream>
 
 PhysicsManager::PhysicsManager()
@@ -71,6 +73,13 @@ void PhysicsManager::shutdown()
 
     mDynamicActors.clear();
 
+    // Release convex meshes
+    for (PxConvexMesh* mesh : mConvexMeshes)
+    {
+        if (mesh) mesh->release();
+    }
+    mConvexMeshes.clear();
+
     PxCloseExtensions();
 
     if (mScene) mScene->release();
@@ -111,6 +120,114 @@ PxRigidDynamic* PhysicsManager::createDynamicBox(const glm::vec3& position, cons
         mDynamicActors.push_back(body);
     }
     return body;
+}
+
+PxConvexMesh* PhysicsManager::createConvexMesh(const std::vector<Vertex>& vertices)
+{
+    if (!mIsInitialized) return nullptr;
+
+    // Extract positions from vertices
+    std::vector<PxVec3> points;
+    points.reserve(vertices.size());
+    for (const Vertex& v : vertices)
+    {
+        points.push_back(PxVec3(v.position.x, v.position.y, v.position.z));
+    }
+
+    // Create convex mesh descriptor
+    PxConvexMeshDesc convexDesc;
+    convexDesc.points.count = (PxU32)points.size();
+    convexDesc.points.stride = sizeof(PxVec3);
+    convexDesc.points.data = points.data();
+    convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;  // Let PhysX compute the convex hull
+
+    // Setup cooking parameters
+    PxCookingParams cookingParams(mPhysics->getTolerancesScale());
+
+    // Cook the convex mesh using standalone function (PhysX 5.x API)
+    PxDefaultMemoryOutputStream writeBuffer;
+    PxConvexMeshCookingResult::Enum result;
+    if (!PxCookConvexMesh(cookingParams, convexDesc, writeBuffer, &result))
+    {
+        std::cerr << "Failed to cook convex mesh!" << std::endl;
+        return nullptr;
+    }
+
+    // Create the convex mesh from cooked data
+    PxDefaultMemoryInputData readBuffer(writeBuffer.getData(), writeBuffer.getSize());
+    PxConvexMesh* convexMesh = mPhysics->createConvexMesh(readBuffer);
+
+    if (convexMesh)
+    {
+        mConvexMeshes.push_back(convexMesh);
+        std::cout << "Convex mesh created with " << convexMesh->getNbVertices() << " vertices." << std::endl;
+    }
+
+    return convexMesh;
+}
+
+PxRigidDynamic* PhysicsManager::createDynamicConvex(const glm::vec3& position, PxConvexMesh* convexMesh, float mass)
+{
+    if (!mIsInitialized || !convexMesh) return nullptr;
+
+    PxTransform transform(PxVec3(position.x, position.y, position.z));
+    PxConvexMeshGeometry geometry(convexMesh);
+
+    PxRigidDynamic* body = PxCreateDynamic(*mPhysics, transform, geometry, *mMaterial, mass);
+    if (body)
+    {
+        body->setAngularDamping(0.5f);
+        mScene->addActor(*body);
+        mDynamicActors.push_back(body);
+    }
+    return body;
+}
+
+bool PhysicsManager::getConvexMeshData(PxRigidActor* actor, std::vector<glm::vec3>& outVertices, std::vector<unsigned int>& outIndices) const
+{
+    if (!actor) return false;
+
+    PxShape* shapes[1];
+    if (actor->getShapes(shapes, 1) == 0) return false;
+
+    PxGeometryHolder geomHolder = shapes[0]->getGeometry();
+    if (geomHolder.getType() != PxGeometryType::eCONVEXMESH) return false;
+
+    const PxConvexMeshGeometry& convexGeom = geomHolder.convexMesh();
+    PxConvexMesh* mesh = convexGeom.convexMesh;
+
+    // Get vertices
+    const PxVec3* verts = mesh->getVertices();
+    PxU32 numVerts = mesh->getNbVertices();
+
+    outVertices.clear();
+    outVertices.reserve(numVerts);
+    for (PxU32 i = 0; i < numVerts; i++)
+    {
+        outVertices.push_back(glm::vec3(verts[i].x, verts[i].y, verts[i].z));
+    }
+
+    // Get polygon indices for wireframe rendering
+    outIndices.clear();
+    const PxU8* indexBuffer = mesh->getIndexBuffer();
+    PxU32 numPolygons = mesh->getNbPolygons();
+
+    for (PxU32 p = 0; p < numPolygons; p++)
+    {
+        PxHullPolygon polygon;
+        mesh->getPolygonData(p, polygon);
+
+        // Create edges for this polygon (wireframe)
+        for (PxU32 i = 0; i < polygon.mNbVerts; i++)
+        {
+            PxU32 idx0 = indexBuffer[polygon.mIndexBase + i];
+            PxU32 idx1 = indexBuffer[polygon.mIndexBase + ((i + 1) % polygon.mNbVerts)];
+            outIndices.push_back(idx0);
+            outIndices.push_back(idx1);
+        }
+    }
+
+    return true;
 }
 
 void PhysicsManager::stepSimulation(float deltaTime)

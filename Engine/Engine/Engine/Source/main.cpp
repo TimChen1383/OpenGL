@@ -64,7 +64,9 @@ bool gSpawningEnabled = false;           // True while P key is held
 double gLastSpawnTime = 0.0;             // Time of last spawn
 const double SPAWN_INTERVAL = 0.3;       // Spawn every 0.3 seconds
 const glm::vec3 SPAWN_POSITION(0.0f, 5.0f, 0.0f);
-const glm::vec3 TEAPOT_HALF_EXTENTS(0.8f, 0.5f, 0.5f);
+
+// Convex collision mesh (cooked from teapot vertices)
+physx::PxConvexMesh* gTeapotConvexMesh = nullptr;
 
 //Custom Functions
 void glfw_OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -81,6 +83,7 @@ void RenderImGuiUI();
 void InitWireframeCube();
 void DrawWireframeCube(ShaderProgram& shader, const glm::mat4& model, const glm::vec3& halfExtents);
 void CleanupWireframeCube();
+void DrawConvexWireframe(ShaderProgram& shader, const glm::mat4& model, const std::vector<glm::vec3>& vertices, const std::vector<unsigned int>& indices);
 
 int main()
 {
@@ -170,6 +173,14 @@ int main()
 	// Create physics ground plane
 	gPhysicsManager.createGroundPlane();
 
+	// Create convex collision mesh from teapot vertices
+	gTeapotConvexMesh = gPhysicsManager.createConvexMesh(teapotMesh.getVertices());
+	if (!gTeapotConvexMesh)
+	{
+		std::cerr << "Failed to create teapot convex mesh!" << std::endl;
+		return -1;
+	}
+
 	std::cout << "Hold 'P' to spawn teapots!" << std::endl;
 
 	double lastFrameTime = glfwGetTime();
@@ -194,7 +205,7 @@ int main()
 		// Spawn teapots while P is held (every 0.3 seconds)
 		if (gSpawningEnabled && (currentTime - gLastSpawnTime >= SPAWN_INTERVAL))
 		{
-			gPhysicsManager.createDynamicBox(SPAWN_POSITION, TEAPOT_HALF_EXTENTS, 1.0f);
+			gPhysicsManager.createDynamicConvex(SPAWN_POSITION, gTeapotConvexMesh, 1.0f);
 			gLastSpawnTime = currentTime;
 			std::cout << "Spawned teapot! Total: " << gPhysicsManager.getDynamicActors().size() << std::endl;
 		}
@@ -284,25 +295,27 @@ int main()
 		// Render collision mesh wireframes if enabled
 		if (gShowCollisionMesh)
 		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			glDisable(GL_CULL_FACE);
+			glDisable(GL_DEPTH_TEST);
 
 			WireframeShader.use();
 			WireframeShader.setUniform("view", view);
 			WireframeShader.setUniform("projection", projection);
 			WireframeShader.setUniform("wireColor", glm::vec3(0.0f, 1.0f, 0.0f)); // Green wireframe
 
+			std::vector<glm::vec3> convexVerts;
+			std::vector<unsigned int> convexIndices;
+
 			for (size_t i = 0; i < dynamicActors.size(); i++)
 			{
-				glm::vec3 halfExtents;
-				if (gPhysicsManager.getActorBoxHalfExtents(dynamicActors[i], halfExtents))
+				if (gPhysicsManager.getConvexMeshData(dynamicActors[i], convexVerts, convexIndices))
 				{
 					model = gPhysicsManager.getActorTransform(dynamicActors[i]);
-					DrawWireframeCube(WireframeShader, model, halfExtents);
+					DrawConvexWireframe(WireframeShader, model, convexVerts, convexIndices);
 				}
 			}
 
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glEnable(GL_DEPTH_TEST);
 			glEnable(GL_CULL_FACE);
 		}
 
@@ -730,4 +743,38 @@ void CleanupWireframeCube()
 		glDeleteBuffers(1, &gWireframeCubeVBO);
 		gWireframeCubeVBO = 0;
 	}
+}
+
+// Draw convex mesh wireframe with dynamic vertex data
+void DrawConvexWireframe(ShaderProgram& shader, const glm::mat4& model, const std::vector<glm::vec3>& vertices, const std::vector<unsigned int>& indices)
+{
+	if (vertices.empty() || indices.empty()) return;
+
+	shader.setUniform("model", model);
+
+	// Create temporary VAO/VBO/EBO for this convex mesh
+	GLuint vao, vbo, ebo;
+	glGenVertexArrays(1, &vao);
+	glGenBuffers(1, &vbo);
+	glGenBuffers(1, &ebo);
+
+	glBindVertexArray(vao);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STREAM_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STREAM_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glDrawElements(GL_LINES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
+
+	glBindVertexArray(0);
+
+	// Cleanup temporary buffers
+	glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &ebo);
 }

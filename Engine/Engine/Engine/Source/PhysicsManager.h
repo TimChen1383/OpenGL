@@ -6,6 +6,9 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include <vector>
 
+// Forward declaration
+struct Vertex;
+
 using namespace physx;
 
 class PhysicsManager
@@ -22,6 +25,15 @@ public:
 
     // Create a dynamic box at position with given half-extents
     PxRigidDynamic* createDynamicBox(const glm::vec3& position, const glm::vec3& halfExtents, float mass = 1.0f);
+
+    // Create a convex mesh from vertices (cooks and caches the mesh)
+    PxConvexMesh* createConvexMesh(const std::vector<Vertex>& vertices);
+
+    // Create a dynamic body with convex mesh collision
+    PxRigidDynamic* createDynamicConvex(const glm::vec3& position, PxConvexMesh* convexMesh, float mass = 1.0f);
+
+    // Get convex mesh vertices for debug rendering
+    bool getConvexMeshData(PxRigidActor* actor, std::vector<glm::vec3>& outVertices, std::vector<unsigned int>& outIndices) const;
 
     // Step the simulation
     void stepSimulation(float deltaTime);
@@ -58,6 +70,7 @@ private:
     PxPvd* mPvd;
 
     std::vector<PxRigidDynamic*> mDynamicActors;
+    std::vector<PxConvexMesh*> mConvexMeshes;  // Cache cooked convex meshes
     bool mIsInitialized;
 };
 

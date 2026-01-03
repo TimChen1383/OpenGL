@@ -24,6 +24,9 @@ public:
     bool loadOBJ(const std::string& filename);
     void draw();
 
+    // Get vertices for physics collision
+    const std::vector<Vertex>& getVertices() const { return mVertices; }
+
 private:
 
     void initBuffer();
