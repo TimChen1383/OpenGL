@@ -50,7 +50,6 @@ bool Texture2D::loadTexture(const string& filename, bool generateMipMaps)
     glBindTexture(GL_TEXTURE_2D,mTexture); //We need to bind the texture we are using before setting parameters
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT); //left right direction
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT); //up down direction
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //if texture is larger than the mapping area
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //if texture is smaller than the mapping area
 
     //Mapping the loaded image data to the texture
@@ -60,6 +59,12 @@ bool Texture2D::loadTexture(const string& filename, bool generateMipMaps)
     if (generateMipMaps)
     {
         glGenerateMipmap(GL_TEXTURE_2D);
+        // Use trilinear filtering for smooth transitions between mip levels
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    }
+    else
+    {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     }
     
     //Free the image data and Unbind the texture after loaded into OpenGL
