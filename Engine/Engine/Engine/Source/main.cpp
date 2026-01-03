@@ -350,6 +350,7 @@ bool InitOpenGL()
 
 	glfwMakeContextCurrent(gwindow);
 	glfwSetKeyCallback(gwindow, glfw_OnKey);
+	glfwSetFramebufferSizeCallback(gwindow, glfw_OnFrameBufferSize);
 	glfwSetCursorPosCallback(gwindow, glfw_onMouseMove);//Every time the mouse moves, this function is called
 	glfwSetScrollCallback(gwindow, glfw_onMouseScroll);
 
