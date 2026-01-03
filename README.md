@@ -1,7 +1,6 @@
 # OpenGL
 #### Physics
-![Physics](https://github.com/user-attachments/assets/1122c78c-ce22-4564-b579-caccaac1ee2a)
-
+![physics3](https://github.com/user-attachments/assets/17bd8cb1-87a9-4e74-8835-5fd1422bc6ef)
 
 #### Shadow
 ![Shadow](https://github.com/user-attachments/assets/0c26bcbe-b867-4c80-93eb-9be53ed682e9)
