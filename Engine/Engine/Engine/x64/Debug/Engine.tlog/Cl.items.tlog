@@ -4,6 +4,7 @@ D:\GitHub\OpenGL\Engine\Engine\Engine\Source\Mesh.cpp;D:\GitHub\OpenGL\Engine\En
 D:\GitHub\OpenGL\Engine\Engine\Engine\Source\PhysicsManager.cpp;D:\GitHub\OpenGL\Engine\Engine\Engine\x64\Debug\PhysicsManager.obj
 D:\GitHub\OpenGL\Engine\Engine\Engine\Source\ShaderProgram.cpp;D:\GitHub\OpenGL\Engine\Engine\Engine\x64\Debug\ShaderProgram.obj
 D:\GitHub\OpenGL\Engine\Engine\Engine\Source\Texture2D.cpp;D:\GitHub\OpenGL\Engine\Engine\Engine\x64\Debug\Texture2D.obj
+D:\GitHub\OpenGL\Engine\Engine\Engine\Source\VolumeRenderer.cpp;D:\GitHub\OpenGL\Engine\Engine\Engine\x64\Debug\VolumeRenderer.obj
 D:\GitHub\OpenGL\Engine\Engine\Engine\Source\imgui\imgui.cpp;D:\GitHub\OpenGL\Engine\Engine\Engine\x64\Debug\imgui.obj
 D:\GitHub\OpenGL\Engine\Engine\Engine\Source\imgui\imgui_draw.cpp;D:\GitHub\OpenGL\Engine\Engine\Engine\x64\Debug\imgui_draw.obj
 D:\GitHub\OpenGL\Engine\Engine\Engine\Source\imgui\imgui_tables.cpp;D:\GitHub\OpenGL\Engine\Engine\Engine\x64\Debug\imgui_tables.obj

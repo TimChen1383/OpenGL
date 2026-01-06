@@ -17,6 +17,7 @@
 #include "Camera.h"
 #include "Mesh.h"
 #include "PhysicsManager.h"
+#include "VolumeRenderer.h"
 
 //Global variables
 const char* APP_Title = "OpenGL Engine";
@@ -67,6 +68,10 @@ const glm::vec3 SPAWN_POSITION(0.0f, 5.0f, 0.0f);
 
 // Convex collision mesh (cooked from teapot vertices)
 physx::PxConvexMesh* gTeapotConvexMesh = nullptr;
+
+// Volume rendering
+VolumeRenderer gVolumeRenderer;
+bool gShowSmoke = true;
 
 //Custom Functions
 void glfw_OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -183,6 +188,23 @@ int main()
 
 	std::cout << "Hold 'P' to spawn teapots!" << std::endl;
 
+	// Initialize Volume Renderer
+	if (!gVolumeRenderer.init())
+	{
+		std::cerr << "Failed to initialize VolumeRenderer!" << std::endl;
+		return -1;
+	}
+
+	// Try to load VDB file, fall back to procedural if it fails
+	if (!gVolumeRenderer.loadVDBFile("bunny_cloud.vdb"))
+	{
+		std::cout << "Using procedural fog sphere." << std::endl;
+	}
+
+	// Set initial smoke position and scale
+	gVolumeRenderer.setPosition(glm::vec3(0.0f, 3.0f, 0.0f));
+	gVolumeRenderer.setScale(glm::vec3(3.0f, 3.0f, 3.0f));
+
 	double lastFrameTime = glfwGetTime();
 	
 	//Main Loop
@@ -292,6 +314,13 @@ int main()
 		groundMesh.draw();
 		textureGround.unbindTexture(0);
 
+		// Render smoke volume
+		if (gShowSmoke && gVolumeRenderer.isValid())
+		{
+			gVolumeRenderer.render(view, projection, viewPos, gDirLightDirection,
+			                       effectiveLightColor, dirDepthMap, dirLightSpaceMatrix);
+		}
+
 		// Render collision mesh wireframes if enabled
 		if (gShowCollisionMesh)
 		{
@@ -328,6 +357,9 @@ int main()
 
 	// Cleanup wireframe resources
 	CleanupWireframeCube();
+
+	// Cleanup volume renderer
+	gVolumeRenderer.shutdown();
 
 	// Cleanup physics
 	gPhysicsManager.shutdown();
@@ -661,6 +693,95 @@ void RenderImGuiUI()
 		ImGui::BulletText("TAB - Toggle UI / Camera");
 		ImGui::BulletText("WASD - Move camera");
 		ImGui::BulletText("P - Spawn teapots");
+
+		ImGui::End();
+
+		// Smoke Volume Control Window
+		ImGui::SetNextWindowPos(ImVec2(10, 530), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_FirstUseEver);
+
+		ImGui::Begin("Smoke Controls");
+
+		ImGui::Checkbox("Show Smoke", &gShowSmoke);
+
+		ImGui::Spacing();
+		ImGui::Text("Appearance");
+		ImGui::Separator();
+
+		// Smoke color
+		glm::vec3 smokeColor = gVolumeRenderer.getSmokeColor();
+		if (ImGui::ColorEdit3("Smoke Color", &smokeColor.x))
+		{
+			gVolumeRenderer.setSmokeColor(smokeColor);
+		}
+
+		// Density
+		float density = gVolumeRenderer.getDensityMultiplier();
+		if (ImGui::SliderFloat("Density", &density, 0.1f, 5.0f, "%.2f"))
+		{
+			gVolumeRenderer.setDensityMultiplier(density);
+		}
+
+		// Absorption
+		float absorption = gVolumeRenderer.getAbsorption();
+		if (ImGui::SliderFloat("Absorption", &absorption, 0.1f, 5.0f, "%.2f"))
+		{
+			gVolumeRenderer.setAbsorption(absorption);
+		}
+
+		ImGui::Spacing();
+		ImGui::Text("Transform");
+		ImGui::Separator();
+
+		// Position
+		glm::vec3 smokePos = gVolumeRenderer.getPosition();
+		if (ImGui::DragFloat3("Position", &smokePos.x, 0.1f, -20.0f, 20.0f, "%.1f"))
+		{
+			gVolumeRenderer.setPosition(smokePos);
+		}
+
+		// Scale
+		glm::vec3 smokeScale = gVolumeRenderer.getScale();
+		if (ImGui::DragFloat3("Scale", &smokeScale.x, 0.1f, 0.1f, 10.0f, "%.1f"))
+		{
+			gVolumeRenderer.setScale(smokeScale);
+		}
+
+		// Rotation
+		glm::vec3 smokeRot = gVolumeRenderer.getRotation();
+		if (ImGui::DragFloat3("Rotation", &smokeRot.x, 1.0f, -180.0f, 180.0f, "%.0f"))
+		{
+			gVolumeRenderer.setRotation(smokeRot);
+		}
+
+		ImGui::Spacing();
+		ImGui::Text("Quality");
+		ImGui::Separator();
+
+		// Step size
+		float stepSize = gVolumeRenderer.getStepSize();
+		if (ImGui::SliderFloat("Step Size", &stepSize, 0.005f, 0.05f, "%.3f"))
+		{
+			gVolumeRenderer.setStepSize(stepSize);
+		}
+
+		// Max steps
+		int maxSteps = gVolumeRenderer.getMaxSteps();
+		if (ImGui::SliderInt("Max Steps", &maxSteps, 64, 512))
+		{
+			gVolumeRenderer.setMaxSteps(maxSteps);
+		}
+
+		ImGui::Spacing();
+		ImGui::Text("Shadows");
+		ImGui::Separator();
+
+		// Shadow density
+		float shadowDensity = gVolumeRenderer.getShadowDensityMultiplier();
+		if (ImGui::SliderFloat("Shadow Density", &shadowDensity, 0.0f, 2.0f, "%.2f"))
+		{
+			gVolumeRenderer.setShadowDensityMultiplier(shadowDensity);
+		}
 
 		ImGui::End();
 	}

@@ -393,6 +393,12 @@ typedef struct
    float ymin,ymax;         // height of row above and below baseline
    int num_chars;
 } StbTexteditRow;
+
+// [DEAR IMGUI] Moved outside implementation block so it's available to imgui_widgets.cpp
+#ifndef STB_TEXT_HAS_SELECTION
+#define STB_TEXT_HAS_SELECTION(s)   ((s)->select_start != (s)->select_end)
+#endif
+
 #endif //INCLUDE_IMSTB_TEXTEDIT_H
 
 

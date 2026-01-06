@@ -115,6 +115,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>.\Common\includes\;$(ProjectDir)..\PhysX\physx\include\;.\Source\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>.\Common\includes\;$(ProjectDir)..\PhysX\physx\include\;.\Source\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,6 +154,7 @@
     <ClCompile Include="Source\PhysicsManager.cpp" />
     <ClCompile Include="Source\ShaderProgram.cpp" />
     <ClCompile Include="Source\Texture2D.cpp" />
+    <ClCompile Include="Source\VolumeRenderer.cpp" />
     <ClCompile Include="Source\imgui\imgui.cpp" />
     <ClCompile Include="Source\imgui\imgui_draw.cpp" />
     <ClCompile Include="Source\imgui\imgui_tables.cpp" />
@@ -598,6 +601,7 @@
     <ClInclude Include="Source\PhysicsManager.h" />
     <ClInclude Include="Source\ShaderProgram.h" />
     <ClInclude Include="Source\Texture2D.h" />
+    <ClInclude Include="Source\VolumeRenderer.h" />
     <ClInclude Include="Source\imgui\imgui.h" />
     <ClInclude Include="Source\imgui\imgui_internal.h" />
     <ClInclude Include="Source\imgui\imconfig.h" />
@@ -623,6 +627,8 @@
     <Content Include="bin\ShadowMap.vert" />
     <Content Include="bin\Wireframe.vert" />
     <Content Include="bin\Wireframe.frag" />
+    <Content Include="bin\VolumeRaymarch.vert" />
+    <Content Include="bin\VolumeRaymarch.frag" />
     <Content Include="bin\Teapot.obj" />
     <Content Include="Common\includes\glm\CMakeLists.txt" />
     <Content Include="Common\lib\glew32.lib" />

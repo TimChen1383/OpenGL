@@ -10,6 +10,11 @@ D:\GitHub\OpenGL\Engine\Engine\Engine\Source\Mesh.cpp(169,49): warning C4267: 'a
   PhysicsManager.cpp
   ShaderProgram.cpp
   Texture2D.cpp
+  VolumeRenderer.cpp
+D:\GitHub\OpenGL\Engine\Engine\Engine\Common\includes\nanovdb\NanoVDB.h(1,1): warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+  (compiling source file 'Source/VolumeRenderer.cpp')
+  
+D:\GitHub\OpenGL\Engine\Engine\Engine\Common\includes\nanovdb\util\GridChecksum.h(6): warning : Include nanovdb/tools/GridChecksum.h instead.
   imgui.cpp
   imgui_draw.cpp
   imgui_tables.cpp
@@ -55,14 +60,23 @@ PhysXPvdSDK_static_64.lib(PxProfileEventImpl.obj) : warning LNK4099: PDB 'PhysXP
 PhysXPvdSDK_static_64.lib(PxPvdProfileZoneClient.obj) : warning LNK4099: PDB 'PhysXPvdSDK_static_64.pdb' was not found with 'PhysXPvdSDK_static_64.lib(PxPvdProfileZoneClient.obj)' or at 'D:\GitHub\OpenGL\Engine\Engine\Engine\bin\PhysXPvdSDK_static_64.pdb'; linking object as if no debug info
 LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
 LINK : warning LNK4217: symbol '__glewBindBuffer' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"private: void __cdecl Mesh::initBuffer(void)" (?initBuffer@Mesh@@AEAAXXZ)'
+LINK : warning LNK4286: symbol '__glewBindBuffer' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewBufferData' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"private: void __cdecl Mesh::initBuffer(void)" (?initBuffer@Mesh@@AEAAXXZ)'
+LINK : warning LNK4286: symbol '__glewBufferData' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewDeleteBuffers' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"public: __cdecl Mesh::~Mesh(void)" (??1Mesh@@QEAA@XZ)'
+LINK : warning LNK4286: symbol '__glewDeleteBuffers' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewGenBuffers' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"private: void __cdecl Mesh::initBuffer(void)" (?initBuffer@Mesh@@AEAAXXZ)'
+LINK : warning LNK4286: symbol '__glewGenBuffers' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewEnableVertexAttribArray' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"private: void __cdecl Mesh::initBuffer(void)" (?initBuffer@Mesh@@AEAAXXZ)'
+LINK : warning LNK4286: symbol '__glewEnableVertexAttribArray' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewVertexAttribPointer' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"private: void __cdecl Mesh::initBuffer(void)" (?initBuffer@Mesh@@AEAAXXZ)'
+LINK : warning LNK4286: symbol '__glewVertexAttribPointer' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewBindVertexArray' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"public: void __cdecl Mesh::draw(void)" (?draw@Mesh@@QEAAXXZ)'
+LINK : warning LNK4286: symbol '__glewBindVertexArray' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewDeleteVertexArrays' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"public: __cdecl Mesh::~Mesh(void)" (??1Mesh@@QEAA@XZ)'
+LINK : warning LNK4286: symbol '__glewDeleteVertexArrays' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewGenVertexArrays' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"private: void __cdecl Mesh::initBuffer(void)" (?initBuffer@Mesh@@AEAAXXZ)'
+LINK : warning LNK4286: symbol '__glewGenVertexArrays' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewAttachShader' defined in 'glew32s.lib(glew.obj)' is imported by 'ShaderProgram.obj' in function '"public: bool __cdecl ShaderProgram::loadShaders(char const *,char const *)" (?loadShaders@ShaderProgram@@QEAA_NPEBD0@Z)'
 LINK : warning LNK4217: symbol '__glewCompileShader' defined in 'glew32s.lib(glew.obj)' is imported by 'ShaderProgram.obj' in function '"public: bool __cdecl ShaderProgram::loadShaders(char const *,char const *)" (?loadShaders@ShaderProgram@@QEAA_NPEBD0@Z)'
 LINK : warning LNK4217: symbol '__glewCreateProgram' defined in 'glew32s.lib(glew.obj)' is imported by 'ShaderProgram.obj' in function '"public: bool __cdecl ShaderProgram::loadShaders(char const *,char const *)" (?loadShaders@ShaderProgram@@QEAA_NPEBD0@Z)'
@@ -84,5 +98,7 @@ LINK : warning LNK4217: symbol '__glewUniform4f' defined in 'glew32s.lib(glew.ob
 LINK : warning LNK4217: symbol '__glewUniformMatrix4fv' defined in 'glew32s.lib(glew.obj)' is imported by 'ShaderProgram.obj' in function '"public: void __cdecl ShaderProgram::setUniform(char const *,struct glm::mat<4,4,float,0> const &)" (?setUniform@ShaderProgram@@QEAAXPEBDAEBU?$mat@$03$03M$0A@@glm@@@Z)'
 LINK : warning LNK4217: symbol '__glewUseProgram' defined in 'glew32s.lib(glew.obj)' is imported by 'ShaderProgram.obj' in function '"public: void __cdecl ShaderProgram::use(void)" (?use@ShaderProgram@@QEAAXXZ)'
 LINK : warning LNK4217: symbol '__glewActiveTexture' defined in 'glew32s.lib(glew.obj)' is imported by 'Texture2D.obj' in function '"public: void __cdecl Texture2D::bindTexture(unsigned int)" (?bindTexture@Texture2D@@QEAAXI@Z)'
+LINK : warning LNK4286: symbol '__glewActiveTexture' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj'
 LINK : warning LNK4217: symbol '__glewGenerateMipmap' defined in 'glew32s.lib(glew.obj)' is imported by 'Texture2D.obj' in function '"public: bool __cdecl Texture2D::loadTexture(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,bool)" (?loadTexture@Texture2D@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N@Z)'
+LINK : warning LNK4217: symbol '__glewTexImage3D' defined in 'glew32s.lib(glew.obj)' is imported by 'VolumeRenderer.obj' in function '"private: void __cdecl VolumeRenderer::createVolumeTexture(class std::vector<float,class std::allocator<float> > const &,int,int,int)" (?createVolumeTexture@VolumeRenderer@@AEAAXAEBV?$vector@MV?$allocator@M@std@@@std@@HHH@Z)'
   Engine.vcxproj -> D:\GitHub\OpenGL\Engine\Engine\Engine\bin\Engine.exe
