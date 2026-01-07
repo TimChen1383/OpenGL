@@ -71,6 +71,12 @@ public:
     void shutdown();
 
 private:
+    // Load OpenVDB file (.vdb format)
+    bool loadOpenVDBFile(const std::string& filepath);
+
+    // Load NanoVDB file (.nvdb format)
+    bool loadNanoVDBFile(const std::string& filepath);
+
     // Create 3D texture from volume data
     void createVolumeTexture(const std::vector<float>& data, int resX, int resY, int resZ);
 

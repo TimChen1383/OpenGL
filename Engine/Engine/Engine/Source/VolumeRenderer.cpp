@@ -10,7 +10,12 @@
 #include <algorithm>
 #include <cctype>
 
-// NanoVDB includes
+// OpenVDB includes for loading .vdb files
+#include <openvdb/openvdb.h>
+#include <openvdb/io/File.h>
+#include <openvdb/tools/Interpolation.h>
+
+// NanoVDB includes for loading .nvdb files
 #include <nanovdb/NanoVDB.h>
 #include <nanovdb/io/IO.h>
 #include <nanovdb/GridHandle.h>
@@ -70,15 +75,174 @@ bool VolumeRenderer::loadVDBFile(const std::string& filepath)
 
     if (ext == "vdb")
     {
-        std::cout << "=====================================================================" << std::endl;
-        std::cout << "NOTE: .vdb files (OpenVDB format) require conversion to .nvdb format." << std::endl;
-        std::cout << "To convert, you can use the nanovdb_convert tool from OpenVDB, or" << std::endl;
-        std::cout << "download pre-converted .nvdb files from openvdb.org" << std::endl;
-        std::cout << "=====================================================================" << std::endl;
-        std::cout << "Creating procedural fog sphere as demonstration..." << std::endl;
+        // Load OpenVDB file using OpenVDB library
+        return loadOpenVDBFile(filepath);
+    }
+    else if (ext == "nvdb")
+    {
+        // Load NanoVDB file
+        return loadNanoVDBFile(filepath);
+    }
+    else
+    {
+        std::cerr << "Unknown file extension: " << ext << std::endl;
+        std::cerr << "Creating procedural fog sphere as fallback..." << std::endl;
         createProceduralFogSphere(1.0f, glm::vec3(0.0f));
         return false;
     }
+}
+
+bool VolumeRenderer::loadOpenVDBFile(const std::string& filepath)
+{
+    std::cout << "Loading OpenVDB file: " << filepath << std::endl;
+
+    try
+    {
+        // Initialize OpenVDB (safe to call multiple times)
+        openvdb::initialize();
+
+        // Open the VDB file
+        openvdb::io::File file(filepath);
+        file.open();
+
+        // Get the first grid (usually the density/fog volume)
+        openvdb::GridBase::Ptr baseGrid;
+        for (openvdb::io::File::NameIterator nameIter = file.beginName(); nameIter != file.endName(); ++nameIter)
+        {
+            std::cout << "Found grid: " << nameIter.gridName() << std::endl;
+            baseGrid = file.readGrid(nameIter.gridName());
+            break; // Use the first grid
+        }
+
+        file.close();
+
+        if (!baseGrid)
+        {
+            std::cerr << "No grids found in VDB file!" << std::endl;
+            createProceduralFogSphere(1.0f, glm::vec3(0.0f));
+            return false;
+        }
+
+        // Try to cast to FloatGrid
+        openvdb::FloatGrid::Ptr floatGrid = openvdb::gridPtrCast<openvdb::FloatGrid>(baseGrid);
+        if (!floatGrid)
+        {
+            std::cerr << "Grid is not a float grid, trying to convert..." << std::endl;
+            createProceduralFogSphere(1.0f, glm::vec3(0.0f));
+            return false;
+        }
+
+        std::cout << "Grid class: " << floatGrid->gridClassToString(floatGrid->getGridClass()) << std::endl;
+        std::cout << "Active voxel count: " << floatGrid->activeVoxelCount() << std::endl;
+
+        // Get bounding box in index space
+        openvdb::CoordBBox bbox = floatGrid->evalActiveVoxelBoundingBox();
+        if (bbox.empty())
+        {
+            std::cerr << "Grid bounding box is empty!" << std::endl;
+            createProceduralFogSphere(1.0f, glm::vec3(0.0f));
+            return false;
+        }
+
+        openvdb::Coord minCoord = bbox.min();
+        openvdb::Coord maxCoord = bbox.max();
+
+        int gridSizeX = maxCoord.x() - minCoord.x() + 1;
+        int gridSizeY = maxCoord.y() - minCoord.y() + 1;
+        int gridSizeZ = maxCoord.z() - minCoord.z() + 1;
+
+        std::cout << "Grid index bounds: (" << minCoord.x() << ", " << minCoord.y() << ", " << minCoord.z() << ") to ("
+                  << maxCoord.x() << ", " << maxCoord.y() << ", " << maxCoord.z() << ")" << std::endl;
+        std::cout << "Grid size: " << gridSizeX << " x " << gridSizeY << " x " << gridSizeZ << std::endl;
+
+        // Calculate resolution (clamp to reasonable size for GPU)
+        const int maxRes = 128;
+        float aspectX = (float)gridSizeX / std::max({gridSizeX, gridSizeY, gridSizeZ});
+        float aspectY = (float)gridSizeY / std::max({gridSizeX, gridSizeY, gridSizeZ});
+        float aspectZ = (float)gridSizeZ / std::max({gridSizeX, gridSizeY, gridSizeZ});
+
+        mResolutionX = std::max(16, std::min(maxRes, (int)(maxRes * aspectX)));
+        mResolutionY = std::max(16, std::min(maxRes, (int)(maxRes * aspectY)));
+        mResolutionZ = std::max(16, std::min(maxRes, (int)(maxRes * aspectZ)));
+
+        std::cout << "Resampling to: " << mResolutionX << " x " << mResolutionY << " x " << mResolutionZ << std::endl;
+
+        // Create sampler for trilinear interpolation
+        openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler(*floatGrid);
+
+        // Sample the grid into a 3D array
+        std::vector<float> volumeData(mResolutionX * mResolutionY * mResolutionZ, 0.0f);
+
+        float maxVal = 0.0f;
+        bool isLevelSet = (floatGrid->getGridClass() == openvdb::GRID_LEVEL_SET);
+
+        for (int z = 0; z < mResolutionZ; ++z)
+        {
+            for (int y = 0; y < mResolutionY; ++y)
+            {
+                for (int x = 0; x < mResolutionX; ++x)
+                {
+                    // Map from [0, resolution-1] to grid index space
+                    float gx = minCoord.x() + (float)x / (mResolutionX - 1) * gridSizeX;
+                    float gy = minCoord.y() + (float)y / (mResolutionY - 1) * gridSizeY;
+                    float gz = minCoord.z() + (float)z / (mResolutionZ - 1) * gridSizeZ;
+
+                    openvdb::Vec3R pos(gx, gy, gz);
+                    float value = sampler.isSample(pos);
+
+                    // For level sets, convert signed distance to density
+                    if (isLevelSet)
+                    {
+                        value = value < 0 ? std::min(1.0f, -value * 2.0f) : 0.0f;
+                    }
+
+                    value = std::max(0.0f, value);
+                    int idx = x + y * mResolutionX + z * mResolutionX * mResolutionY;
+                    volumeData[idx] = value;
+                    maxVal = std::max(maxVal, value);
+                }
+            }
+        }
+
+        std::cout << "Max density value: " << maxVal << std::endl;
+
+        // Normalize values to [0, 1]
+        if (maxVal > 0.0f)
+        {
+            for (float& v : volumeData)
+            {
+                v /= maxVal;
+            }
+        }
+
+        // Get world bounds
+        openvdb::Vec3d worldMin = floatGrid->indexToWorld(minCoord);
+        openvdb::Vec3d worldMax = floatGrid->indexToWorld(maxCoord);
+
+        mBoundsMin = glm::vec3((float)worldMin.x(), (float)worldMin.y(), (float)worldMin.z());
+        mBoundsMax = glm::vec3((float)worldMax.x(), (float)worldMax.y(), (float)worldMax.z());
+
+        std::cout << "World bounds: (" << mBoundsMin.x << ", " << mBoundsMin.y << ", " << mBoundsMin.z << ") to ("
+                  << mBoundsMax.x << ", " << mBoundsMax.y << ", " << mBoundsMax.z << ")" << std::endl;
+
+        // Create OpenGL texture
+        createVolumeTexture(volumeData, mResolutionX, mResolutionY, mResolutionZ);
+
+        std::cout << "OpenVDB file loaded successfully!" << std::endl;
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Exception while loading OpenVDB file: " << e.what() << std::endl;
+        std::cerr << "Creating procedural fog sphere as fallback..." << std::endl;
+        createProceduralFogSphere(1.0f, glm::vec3(0.0f));
+        return false;
+    }
+}
+
+bool VolumeRenderer::loadNanoVDBFile(const std::string& filepath)
+{
+    std::cout << "Loading NanoVDB file: " << filepath << std::endl;
 
     try
     {
@@ -189,12 +353,12 @@ bool VolumeRenderer::loadVDBFile(const std::string& filepath)
         // Create texture
         createVolumeTexture(volumeData, mResolutionX, mResolutionY, mResolutionZ);
 
-        std::cout << "VDB file loaded successfully!" << std::endl;
+        std::cout << "NanoVDB file loaded successfully!" << std::endl;
         return true;
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Exception while loading VDB file: " << e.what() << std::endl;
+        std::cerr << "Exception while loading NanoVDB file: " << e.what() << std::endl;
         std::cerr << "Creating procedural fog sphere as fallback..." << std::endl;
         createProceduralFogSphere(1.0f, glm::vec3(0.0f));
         return false;

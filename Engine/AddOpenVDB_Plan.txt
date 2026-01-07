@@ -1,0 +1,254 @@
+================================================================================
+                    ADD SMOKE EFFECT USING NANOVDB - IMPLEMENTATION PLAN
+================================================================================
+
+OVERVIEW
+--------
+Add volumetric smoke rendering to the OpenGL Engine using NanoVDB. This plan
+uses NanoVDB (not full OpenVDB) because:
+
+  - Header-only library: No complex build dependencies, just #include
+  - GPU-friendly design: Optimized for real-time rendering
+  - OpenGL/GLSL compatible: Works without CUDA dependency
+  - Lightweight: Single header file (NanoVDB.h) contains core data structure
+  - Real-time capable: Designed for interactive applications
+
+WHAT YOU ALREADY HAVE
+---------------------
+  [OK] OpenVDB repository at: D:\GitHub\OpenGL\Engine\openvdb
+  [OK] NanoVDB headers at: D:\GitHub\OpenGL\Engine\openvdb\nanovdb\nanovdb
+  [OK] No additional downloads needed for basic implementation
+
+ADDITIONAL REQUIREMENTS (OPTIONAL)
+----------------------------------
+For loading pre-made VDB smoke files (like Houdini exports):
+  - Download sample .nvdb or .vdb files from: https://www.openvdb.org/download/
+  - Example files: bunny_cloud.vdb, smoke_plume.vdb, etc.
+
+For now, we can create procedural fog volumes without external files.
+
+================================================================================
+                              IMPLEMENTATION STEPS
+================================================================================
+
+PHASE 1: PROJECT SETUP
+----------------------
+1.1 Add NanoVDB include path to Visual Studio project
+    - Open Engine.vcxproj properties
+    - Add to "Additional Include Directories":
+      $(ProjectDir)..\..\openvdb\nanovdb\nanovdb
+
+1.2 Create source files:
+    - Engine/Engine/Source/VolumeRenderer.h
+    - Engine/Engine/Source/VolumeRenderer.cpp
+
+PHASE 2: VOLUME RENDERER CLASS
+------------------------------
+Create VolumeRenderer class with these responsibilities:
+
+2.1 Core Components:
+    - Store NanoVDB grid handle (fog volume data)
+    - Manage 3D texture for GPU volume data
+    - Handle volume transformation (position, scale, rotation)
+
+2.2 Key Methods:
+    - init()              : Initialize OpenGL resources
+    - loadVDBFile(path)   : Load .nvdb file (optional)
+    - createProceduralSmoke() : Generate procedural fog volume
+    - update(deltaTime)   : Animate smoke (optional)
+    - render(view, proj)  : Render volume with raymarching
+    - shutdown()          : Cleanup resources
+
+2.3 OpenGL Resources:
+    - 3D Texture (GL_TEXTURE_3D) for volume density data
+    - VAO/VBO for fullscreen quad or bounding box
+    - Shader program for volume raymarching
+
+PHASE 3: VOLUME RAYMARCHING SHADER
+----------------------------------
+Create new shader pair:
+
+3.1 VolumeRaymarch.vert:
+    - Transform bounding box vertices
+    - Pass ray origin and direction to fragment shader
+
+3.2 VolumeRaymarch.frag:
+    - Implement raymarching algorithm:
+      * Step through volume along view ray
+      * Sample 3D density texture at each step
+      * Accumulate density using Beer-Lambert law
+      * Apply lighting (optional: phase function for scattering)
+    - Key uniforms:
+      * volumeTexture (sampler3D)
+      * volumeMin, volumeMax (bounding box)
+      * stepSize, numSteps
+      * cameraPos, lightDir
+      * absorption, scattering coefficients
+
+PHASE 4: INTEGRATION INTO MAIN.CPP
+----------------------------------
+4.1 Add includes and globals:
+    - #include "VolumeRenderer.h"
+    - VolumeRenderer gVolumeRenderer;
+    - bool gShowSmoke = true;
+
+4.2 Initialize in main():
+    - After OpenGL init, call gVolumeRenderer.init()
+    - Create initial smoke volume
+
+4.3 Render in main loop:
+    - After opaque objects, before ImGui
+    - Enable blending for transparency
+    - Call gVolumeRenderer.render(view, projection)
+
+4.4 Add ImGui controls:
+    - Toggle smoke visibility
+    - Adjust smoke density
+    - Adjust smoke color
+    - Adjust smoke position/scale
+
+4.5 Cleanup:
+    - Call gVolumeRenderer.shutdown() before exit
+
+PHASE 5: ADVANCED FEATURES
+-------------------------------------
+5.1 Shadow Integration:
+    - Render smoke into shadow map (semi-transparent shadows)
+    - Smoke receives shadows from other objects
+
+
+
+================================================================================
+                              TECHNICAL DETAILS
+================================================================================
+
+NANOVDB INTEGRATION APPROACH
+----------------------------
+Option A: CPU-side NanoVDB + OpenGL 3D Texture (RECOMMENDED)
+  - Use NanoVDB to create/load fog volume on CPU
+  - Convert to 3D texture for GPU raymarching in fragment shader
+  - Simpler, works with OpenGL 3.3
+  - Good performance for moderate resolution volumes
+
+Option B: Pure procedural (no NanoVDB at runtime)
+  - Generate 3D noise texture directly
+  - NanoVDB only used for loading pre-made VDB files
+  - Simplest approach for basic smoke effects
+
+RAYMARCHING ALGORITHM (Pseudocode)
+----------------------------------
+```glsl
+vec3 rayOrigin = cameraPos;
+vec3 rayDir = normalize(worldPos - cameraPos);
+
+float t = 0.0;
+float transmittance = 1.0;
+vec3 color = vec3(0.0);
+
+for (int i = 0; i < MAX_STEPS; i++) {
+    vec3 pos = rayOrigin + rayDir * t;
+
+    // Sample density from 3D texture
+    float density = texture(volumeTexture, volumeUV(pos)).r;
+
+    // Beer-Lambert absorption
+    transmittance *= exp(-density * stepSize * absorption);
+
+    // Accumulate color (with optional lighting)
+    color += transmittance * density * smokeColor * stepSize;
+
+    // Early exit if nearly opaque
+    if (transmittance < 0.01) break;
+
+    t += stepSize;
+}
+```
+
+VOLUME TEXTURE FORMAT
+---------------------
+- Resolution: 64x64x64 to 128x128x128 (adjustable)
+- Format: GL_R16F or GL_R32F (single channel density)
+- Filter: GL_LINEAR for smooth interpolation
+- Wrap: GL_CLAMP_TO_BORDER with 0.0 border
+
+BLENDING SETUP
+--------------
+```cpp
+glEnable(GL_BLEND);
+glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+// Render back-to-front or use order-independent transparency
+```
+
+================================================================================
+                              FILE STRUCTURE
+================================================================================
+
+New files to create:
+  Engine/Engine/Source/VolumeRenderer.h
+  Engine/Engine/Source/VolumeRenderer.cpp
+  Engine/Engine/bin/VolumeRaymarch.vert
+  Engine/Engine/bin/VolumeRaymarch.frag
+
+Files to modify:
+  Engine/Engine/Source/main.cpp (add volume rendering)
+  Engine/Engine/Engine.vcxproj (add include paths, new source files)
+
+================================================================================
+                              ESTIMATED COMPLEXITY
+================================================================================
+
+Phase 1 (Setup):           Easy    - Project configuration only
+Phase 2 (VolumeRenderer):  Medium  - New class, 3D texture management
+Phase 3 (Shaders):         Medium  - Raymarching implementation
+Phase 4 (Integration):     Easy    - Wire up to existing code
+Phase 5 (Advanced):        Hard    - Shadow integration, animation
+
+Minimum viable smoke effect: Phases 1-4
+Full featured smoke:         Phases 1-5
+
+================================================================================
+                              DECISION POINTS
+================================================================================
+
+Please confirm your preferences:
+
+1. VOLUME SOURCE:
+   [ ] Procedural (generate noise-based smoke)
+   [V] Load VDB file (need to download sample .vdb files)
+   [ ] Both options
+
+2. VOLUME RESOLUTION:
+   [ ] 64x64x64   (fast, lower quality)
+   [V] 128x128x128 (balanced)
+   [ ] 256x256x256 (high quality, slower)
+
+3. ANIMATION:
+   [V] Static smoke
+   [ ] Animated (scrolling noise)
+   [ ] Physics-driven (advanced)
+
+4. SHADOW INTERACTION:
+   [ ] No shadow integration (simpler)
+   [ ] Smoke casts shadows
+   [ ] Smoke receives shadows
+   [V] Both
+
+================================================================================
+                              NEXT STEPS
+================================================================================
+
+Once you approve this plan:
+
+1. I will configure the Visual Studio project to include NanoVDB headers
+2. Create VolumeRenderer.h/cpp with core functionality
+3. Create raymarching shaders
+4. Integrate into main.cpp
+5. Add ImGui controls for smoke parameters
+6. Test and refine
+
+Please review and let me know:
+- If you want to proceed with this plan
+- Your preferences for the decision points above
+- Any features you want to add or remove
+
+================================================================================
