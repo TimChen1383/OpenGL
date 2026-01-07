@@ -17,7 +17,7 @@ public:
     // Initialize OpenGL resources
     bool init();
 
-    // Load volume from .vdb file (OpenVDB format)
+    // Load volume from .nvdb file (NanoVDB format)
     // Returns false if file cannot be loaded
     bool loadVDBFile(const std::string& filepath);
 
@@ -71,9 +71,6 @@ public:
     void shutdown();
 
 private:
-    // Load OpenVDB file (.vdb format)
-    bool loadOpenVDBFile(const std::string& filepath);
-
     // Load NanoVDB file (.nvdb format)
     bool loadNanoVDBFile(const std::string& filepath);
 

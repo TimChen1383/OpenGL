@@ -64,7 +64,7 @@ bool gSimulationStarted = false;
 bool gSpawningEnabled = false;           // True while P key is held
 double gLastSpawnTime = 0.0;             // Time of last spawn
 const double SPAWN_INTERVAL = 0.3;       // Spawn every 0.3 seconds
-const glm::vec3 SPAWN_POSITION(0.0f, 5.0f, 0.0f);
+const glm::vec3 SPAWN_POSITION(0.0f, 10.0f, 0.0f);
 
 // Convex collision mesh (cooked from teapot vertices)
 physx::PxConvexMesh* gTeapotConvexMesh = nullptr;
@@ -195,15 +195,18 @@ int main()
 		return -1;
 	}
 
-	// Try to load VDB file, fall back to procedural if it fails
-	if (!gVolumeRenderer.loadVDBFile("bunny_cloud.vdb"))
+	// Try to load VDB file
+	if (gVolumeRenderer.loadVDBFile("armadillo.nvdb"))
 	{
-		std::cout << "Using procedural fog sphere." << std::endl;
+		// Set initial smoke position and scale only if loaded successfully
+		gVolumeRenderer.setPosition(glm::vec3(0.0f, 3.0f, 0.0f));
+		gVolumeRenderer.setScale(glm::vec3(3.0f, 3.0f, 3.0f));
+		std::cout << "NanoVDB volume loaded successfully." << std::endl;
 	}
-
-	// Set initial smoke position and scale
-	gVolumeRenderer.setPosition(glm::vec3(0.0f, 3.0f, 0.0f));
-	gVolumeRenderer.setScale(glm::vec3(3.0f, 3.0f, 3.0f));
+	else
+	{
+		std::cout << "No volume loaded - volume rendering disabled." << std::endl;
+	}
 
 	double lastFrameTime = glfwGetTime();
 	
@@ -696,13 +699,15 @@ void RenderImGuiUI()
 
 		ImGui::End();
 
-		// Smoke Volume Control Window
-		ImGui::SetNextWindowPos(ImVec2(10, 530), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_FirstUseEver);
+		// Smoke Volume Control Window - only show if volume is loaded
+		if (gVolumeRenderer.isValid())
+		{
+			ImGui::SetNextWindowPos(ImVec2(10, 530), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_FirstUseEver);
 
-		ImGui::Begin("Smoke Controls");
+			ImGui::Begin("Smoke Controls");
 
-		ImGui::Checkbox("Show Smoke", &gShowSmoke);
+			ImGui::Checkbox("Show Smoke", &gShowSmoke);
 
 		ImGui::Spacing();
 		ImGui::Text("Appearance");
@@ -783,7 +788,8 @@ void RenderImGuiUI()
 			gVolumeRenderer.setShadowDensityMultiplier(shadowDensity);
 		}
 
-		ImGui::End();
+			ImGui::End();
+		}
 	}
 
 	// Render ImGui
