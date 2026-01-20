@@ -21,6 +21,34 @@ public:
     // Returns false if file cannot be loaded
     bool loadVDBFile(const std::string& filepath);
 
+    // Load NVDB animation sequence from folder
+    // Expects files named: baseName_0000.nvdb, baseName_0001.nvdb, etc.
+    bool loadNVDBSequence(const std::string& folderPath, const std::string& baseName);
+
+    // Update animation (call every frame with deltaTime)
+    void update(float deltaTime);
+
+    // Animation playback controls
+    void play() { mIsPlaying = true; }
+    void pause() { mIsPlaying = false; }
+    void stop() { mIsPlaying = false; mCurrentFrame = 0; mFrameTime = 0.0f; }
+    void setFrame(int frame);
+    void setFPS(float fps) { mFPS = fps; }
+    void setLooping(bool loop) { mLoop = loop; }
+
+    // Animation state getters
+    bool isPlaying() const { return mIsPlaying; }
+    bool isLooping() const { return mLoop; }
+    int getCurrentFrame() const { return mCurrentFrame; }
+    int getTotalFrames() const { return mTotalFrames; }
+    float getFPS() const { return mFPS; }
+    bool isAnimationLoaded() const { return !mFramePaths.empty(); }
+    bool isPreloaded() const { return !mFrameTextures.empty(); }
+
+    // Preload all animation frames into GPU memory for smooth playback
+    // targetResolution: cubic resolution for each frame (e.g., 192 for 192³)
+    bool preloadAllFrames(int targetResolution = 192);
+
     // Create a procedural fog sphere (fallback/demo)
     void createProceduralFogSphere(float radius, const glm::vec3& center);
 
@@ -74,8 +102,15 @@ private:
     // Load NanoVDB file (.nvdb format)
     bool loadNanoVDBFile(const std::string& filepath);
 
+    // Load a single frame into the specified texture slot (for animation)
+    // targetResolution: if > 0, clamp to this cubic resolution; if 0, use source resolution
+    bool loadFrameToTexture(int frameIndex, unsigned int& textureOut, int targetResolution = 0);
+
     // Create 3D texture from volume data
     void createVolumeTexture(const std::vector<float>& data, int resX, int resY, int resZ);
+
+    // Create 3D texture and return the texture ID (for animation frames)
+    unsigned int createVolumeTextureReturn(const std::vector<float>& data, int resX, int resY, int resZ);
 
     // Create bounding box mesh for raymarching
     void createBoundingBoxMesh();
@@ -109,4 +144,18 @@ private:
 
     // Shadow parameters
     float mShadowDensityMultiplier;
+
+    // Animation state
+    std::vector<std::string> mFramePaths;  // Paths to all frame files
+    int mCurrentFrame;                      // Current frame index
+    int mTotalFrames;                       // Total number of frames
+    float mFrameTime;                       // Time accumulator for frame timing
+    float mFPS;                             // Playback frames per second
+    bool mIsPlaying;                        // Is animation playing
+    bool mLoop;                             // Loop animation
+    int mLastLoadedFrame;                   // Last frame that was loaded to texture
+
+    // Preloaded frame textures (for smooth playback)
+    std::vector<unsigned int> mFrameTextures;  // All frames loaded into GPU
+    int mAnimationResolution;                   // Resolution used for preloaded frames
 };

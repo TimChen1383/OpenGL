@@ -195,13 +195,31 @@ int main()
 		return -1;
 	}
 
-	// Try to load VDB file
-	if (gVolumeRenderer.loadVDBFile("armadillo.nvdb"))
+	// Try to load VDB animation sequence (campfire)
+	// Path is relative to executable in Engine/Engine/Engine/bin/
+	if (gVolumeRenderer.loadNVDBSequence("../../../smallCampfireNVDB", "smallCampfire"))
 	{
-		// Set initial smoke position and scale only if loaded successfully
+		// Set initial smoke position and scale for campfire
+		gVolumeRenderer.setPosition(glm::vec3(0.0f, 1.0f, 0.0f));
+		gVolumeRenderer.setScale(glm::vec3(5.0f, 5.0f, 5.0f));
+		gVolumeRenderer.setFPS(24.0f);
+		gVolumeRenderer.setSmokeColor(glm::vec3(0.9f, 0.6f, 0.2f));  // Orange fire color
+
+		// Preload all frames into GPU memory for smooth playback
+		// Resolution 192^3 uses ~2.8GB VRAM for 200 frames
+		std::cout << "Preloading animation frames (this may take a moment)..." << std::endl;
+		if (!gVolumeRenderer.preloadAllFrames(192))
+		{
+			std::cerr << "Warning: Failed to preload frames. Animation will load on-demand (slower)." << std::endl;
+		}
+		std::cout << "NanoVDB animation sequence loaded successfully." << std::endl;
+	}
+	else if (gVolumeRenderer.loadVDBFile("armadillo.nvdb"))
+	{
+		// Fallback to static volume
 		gVolumeRenderer.setPosition(glm::vec3(0.0f, 3.0f, 0.0f));
 		gVolumeRenderer.setScale(glm::vec3(3.0f, 3.0f, 3.0f));
-		std::cout << "NanoVDB volume loaded successfully." << std::endl;
+		std::cout << "NanoVDB static volume loaded as fallback." << std::endl;
 	}
 	else
 	{
@@ -220,6 +238,9 @@ int main()
 
 		glfwPollEvents();
 		update(deltaTime);
+
+		// Update volume animation
+		gVolumeRenderer.update((float)deltaTime);
 
 		// Step physics simulation if started
 		if (gSimulationStarted)
@@ -703,11 +724,66 @@ void RenderImGuiUI()
 		if (gVolumeRenderer.isValid())
 		{
 			ImGui::SetNextWindowPos(ImVec2(10, 530), ImGuiCond_FirstUseEver);
-			ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowSize(ImVec2(320, 400), ImGuiCond_FirstUseEver);
 
-			ImGui::Begin("Smoke Controls");
+			ImGui::Begin("Volume Controls");
 
-			ImGui::Checkbox("Show Smoke", &gShowSmoke);
+			ImGui::Checkbox("Show Volume", &gShowSmoke);
+
+			// Animation controls - only show if animation is loaded
+			if (gVolumeRenderer.isAnimationLoaded())
+			{
+				ImGui::Spacing();
+				ImGui::Text("Animation");
+				ImGui::Separator();
+
+				// Play/Pause button
+				if (gVolumeRenderer.isPlaying())
+				{
+					if (ImGui::Button("Pause"))
+					{
+						gVolumeRenderer.pause();
+					}
+				}
+				else
+				{
+					if (ImGui::Button("Play"))
+					{
+						gVolumeRenderer.play();
+					}
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Stop"))
+				{
+					gVolumeRenderer.stop();
+				}
+
+				// Frame slider
+				int currentFrame = gVolumeRenderer.getCurrentFrame();
+				int totalFrames = gVolumeRenderer.getTotalFrames();
+				if (ImGui::SliderInt("Frame", &currentFrame, 0, totalFrames - 1))
+				{
+					gVolumeRenderer.setFrame(currentFrame);
+				}
+
+				// Display frame info
+				ImGui::Text("Frame: %d / %d", currentFrame + 1, totalFrames);
+
+				// FPS control
+				float fps = gVolumeRenderer.getFPS();
+				if (ImGui::SliderFloat("FPS", &fps, 1.0f, 60.0f, "%.1f"))
+				{
+					gVolumeRenderer.setFPS(fps);
+				}
+
+				// Loop checkbox
+				bool loop = gVolumeRenderer.isLooping();
+				if (ImGui::Checkbox("Loop", &loop))
+				{
+					gVolumeRenderer.setLooping(loop);
+				}
+			}
 
 		ImGui::Spacing();
 		ImGui::Text("Appearance");

@@ -9,6 +9,9 @@
 #include <cmath>
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
+#include <iomanip>
+#include <sstream>
 
 // NanoVDB includes for loading .nvdb files
 #include <nanovdb/NanoVDB.h>
@@ -35,6 +38,14 @@ VolumeRenderer::VolumeRenderer()
     , mStepSize(0.01f)
     , mMaxSteps(256)
     , mShadowDensityMultiplier(0.5f)
+    , mCurrentFrame(0)
+    , mTotalFrames(0)
+    , mFrameTime(0.0f)
+    , mFPS(24.0f)
+    , mIsPlaying(false)
+    , mLoop(true)
+    , mLastLoadedFrame(-1)
+    , mAnimationResolution(192)
 {
 }
 
@@ -197,6 +208,383 @@ bool VolumeRenderer::loadNanoVDBFile(const std::string& filepath)
     {
         std::cerr << "Exception while loading NanoVDB file: " << e.what() << std::endl;
         return false;
+    }
+}
+
+bool VolumeRenderer::loadNVDBSequence(const std::string& folderPath, const std::string& baseName)
+{
+    std::cout << "Loading NVDB sequence from: " << folderPath << std::endl;
+
+    // Clear any existing animation data
+    mFramePaths.clear();
+    mCurrentFrame = 0;
+    mTotalFrames = 0;
+    mFrameTime = 0.0f;
+    mLastLoadedFrame = -1;
+
+    // Find all matching files in the folder
+    namespace fs = std::filesystem;
+
+    if (!fs::exists(folderPath) || !fs::is_directory(folderPath))
+    {
+        std::cerr << "Folder does not exist: " << folderPath << std::endl;
+        return false;
+    }
+
+    // Collect all matching files
+    std::vector<std::pair<int, std::string>> frameFiles;
+
+    for (const auto& entry : fs::directory_iterator(folderPath))
+    {
+        if (!entry.is_regular_file()) continue;
+
+        std::string filename = entry.path().filename().string();
+        std::string ext = entry.path().extension().string();
+
+        // Convert extension to lowercase
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        if (ext != ".nvdb") continue;
+
+        // Check if filename matches pattern: baseName_NNNN.nvdb
+        if (filename.find(baseName + "_") != 0) continue;
+
+        // Extract frame number
+        size_t underscorePos = filename.find_last_of('_');
+        size_t dotPos = filename.find_last_of('.');
+        if (underscorePos == std::string::npos || dotPos == std::string::npos) continue;
+
+        std::string frameNumStr = filename.substr(underscorePos + 1, dotPos - underscorePos - 1);
+        try
+        {
+            int frameNum = std::stoi(frameNumStr);
+            frameFiles.push_back({ frameNum, entry.path().string() });
+        }
+        catch (...)
+        {
+            continue; // Skip files with invalid frame numbers
+        }
+    }
+
+    if (frameFiles.empty())
+    {
+        std::cerr << "No matching NVDB files found with base name: " << baseName << std::endl;
+        return false;
+    }
+
+    // Sort by frame number
+    std::sort(frameFiles.begin(), frameFiles.end(),
+        [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    // Store paths in order
+    mFramePaths.reserve(frameFiles.size());
+    for (const auto& frame : frameFiles)
+    {
+        mFramePaths.push_back(frame.second);
+    }
+
+    mTotalFrames = (int)mFramePaths.size();
+    std::cout << "Found " << mTotalFrames << " frames in sequence." << std::endl;
+
+    // Load the first frame
+    if (!loadFrameToTexture(0, mVolumeTexture))
+    {
+        std::cerr << "Failed to load first frame!" << std::endl;
+        mFramePaths.clear();
+        mTotalFrames = 0;
+        return false;
+    }
+
+    mLastLoadedFrame = 0;
+    mIsPlaying = false;  // Don't auto-start until preloaded
+
+    std::cout << "NVDB sequence loaded successfully! " << mTotalFrames << " frames at " << mFPS << " FPS" << std::endl;
+    std::cout << "Call preloadAllFrames() to enable smooth playback." << std::endl;
+    return true;
+}
+
+bool VolumeRenderer::preloadAllFrames(int targetResolution)
+{
+    if (mFramePaths.empty())
+    {
+        std::cerr << "No animation sequence loaded. Call loadNVDBSequence() first." << std::endl;
+        return false;
+    }
+
+    std::cout << "Preloading " << mTotalFrames << " frames at " << targetResolution << "^3 resolution..." << std::endl;
+    std::cout << "Estimated VRAM usage: " << (mTotalFrames * targetResolution * targetResolution * targetResolution * 2 / (1024 * 1024)) << " MB" << std::endl;
+
+    mAnimationResolution = targetResolution;
+
+    // Clear any existing preloaded textures
+    for (unsigned int tex : mFrameTextures)
+    {
+        if (tex != 0)
+        {
+            glDeleteTextures(1, &tex);
+        }
+    }
+    mFrameTextures.clear();
+    mFrameTextures.resize(mTotalFrames, 0);
+
+    // Load each frame
+    for (int i = 0; i < mTotalFrames; ++i)
+    {
+        if (!loadFrameToTexture(i, mFrameTextures[i], targetResolution))
+        {
+            std::cerr << "Failed to preload frame " << i << std::endl;
+            // Clean up already loaded textures
+            for (unsigned int tex : mFrameTextures)
+            {
+                if (tex != 0)
+                {
+                    glDeleteTextures(1, &tex);
+                }
+            }
+            mFrameTextures.clear();
+            return false;
+        }
+
+        // Print progress every 10 frames
+        if ((i + 1) % 10 == 0 || i == mTotalFrames - 1)
+        {
+            std::cout << "Loaded frame " << (i + 1) << " / " << mTotalFrames << std::endl;
+        }
+    }
+
+    // Set current texture to first frame
+    mVolumeTexture = mFrameTextures[0];
+    mCurrentFrame = 0;
+    mLastLoadedFrame = 0;
+    mIsPlaying = true;  // Auto-start playback after preloading
+
+    std::cout << "All frames preloaded successfully! Animation ready for playback." << std::endl;
+    return true;
+}
+
+bool VolumeRenderer::loadFrameToTexture(int frameIndex, unsigned int& textureOut, int targetResolution)
+{
+    if (frameIndex < 0 || frameIndex >= (int)mFramePaths.size())
+    {
+        return false;
+    }
+
+    const std::string& filepath = mFramePaths[frameIndex];
+
+    try
+    {
+        auto handle = nanovdb::io::readGrid(filepath);
+
+        if (!handle)
+        {
+            std::cerr << "Failed to read frame: " << filepath << std::endl;
+            return false;
+        }
+
+        auto* gridMeta = handle.gridMetaData();
+        if (!gridMeta)
+        {
+            return false;
+        }
+
+        auto* grid = handle.grid<float>();
+        if (!grid)
+        {
+            return false;
+        }
+
+        // Get bounding box
+        auto bbox = grid->indexBBox();
+        auto worldBBox = grid->worldBBox();
+
+        int minX = bbox.min()[0], minY = bbox.min()[1], minZ = bbox.min()[2];
+        int maxX = bbox.max()[0], maxY = bbox.max()[1], maxZ = bbox.max()[2];
+
+        // Calculate resolution
+        int sizeX = maxX - minX + 1;
+        int sizeY = maxY - minY + 1;
+        int sizeZ = maxZ - minZ + 1;
+
+        // Apply target resolution limit if specified
+        if (targetResolution > 0)
+        {
+            sizeX = std::min(sizeX, targetResolution);
+            sizeY = std::min(sizeY, targetResolution);
+            sizeZ = std::min(sizeZ, targetResolution);
+        }
+        else
+        {
+            // Default limit of 512
+            sizeX = std::min(sizeX, 512);
+            sizeY = std::min(sizeY, 512);
+            sizeZ = std::min(sizeZ, 512);
+        }
+
+        // For animation, use the resolution from first frame for consistency
+        if (frameIndex == 0)
+        {
+            mResolutionX = sizeX;
+            mResolutionY = sizeY;
+            mResolutionZ = sizeZ;
+            mBoundsMin = glm::vec3(worldBBox.min()[0], worldBBox.min()[1], worldBBox.min()[2]);
+            mBoundsMax = glm::vec3(worldBBox.max()[0], worldBBox.max()[1], worldBBox.max()[2]);
+        }
+
+        // Use consistent resolution across all frames (from frame 0)
+        int resX = mResolutionX;
+        int resY = mResolutionY;
+        int resZ = mResolutionZ;
+
+        auto acc = grid->getAccessor();
+
+        std::vector<float> volumeData(mResolutionX * mResolutionY * mResolutionZ, 0.0f);
+
+        float scaleX = (float)(maxX - minX) / (mResolutionX - 1);
+        float scaleY = (float)(maxY - minY) / (mResolutionY - 1);
+        float scaleZ = (float)(maxZ - minZ) / (mResolutionZ - 1);
+
+        float maxVal = 0.0f;
+
+        for (int z = 0; z < mResolutionZ; ++z)
+        {
+            for (int y = 0; y < mResolutionY; ++y)
+            {
+                for (int x = 0; x < mResolutionX; ++x)
+                {
+                    int gx = minX + (int)(x * scaleX);
+                    int gy = minY + (int)(y * scaleY);
+                    int gz = minZ + (int)(z * scaleZ);
+
+                    nanovdb::Coord coord(gx, gy, gz);
+                    float value = acc.getValue(coord);
+
+                    if (gridMeta->isLevelSet())
+                    {
+                        value = value < 0 ? -value : 0.0f;
+                    }
+
+                    int idx = x + y * mResolutionX + z * mResolutionX * mResolutionY;
+                    volumeData[idx] = std::max(0.0f, value);
+                    maxVal = std::max(maxVal, volumeData[idx]);
+                }
+            }
+        }
+
+        // Normalize
+        if (maxVal > 0.0f)
+        {
+            for (float& v : volumeData)
+            {
+                v /= maxVal;
+            }
+        }
+
+        // Delete old texture if it exists
+        if (textureOut != 0)
+        {
+            glDeleteTextures(1, &textureOut);
+            textureOut = 0;
+        }
+
+        // Create new texture
+        textureOut = createVolumeTextureReturn(volumeData, mResolutionX, mResolutionY, mResolutionZ);
+
+        return textureOut != 0;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Exception loading frame " << frameIndex << ": " << e.what() << std::endl;
+        return false;
+    }
+}
+
+unsigned int VolumeRenderer::createVolumeTextureReturn(const std::vector<float>& data, int resX, int resY, int resZ)
+{
+    unsigned int texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_3D, texture);
+
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_R16F, resX, resY, resZ, 0, GL_RED, GL_FLOAT, data.data());
+
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+
+    float borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+    glBindTexture(GL_TEXTURE_3D, 0);
+
+    return texture;
+}
+
+void VolumeRenderer::update(float deltaTime)
+{
+    if (!mIsPlaying || mTotalFrames <= 1)
+        return;
+
+    mFrameTime += deltaTime;
+    float frameDuration = 1.0f / mFPS;
+
+    while (mFrameTime >= frameDuration)
+    {
+        mFrameTime -= frameDuration;
+        mCurrentFrame++;
+
+        if (mCurrentFrame >= mTotalFrames)
+        {
+            if (mLoop)
+            {
+                mCurrentFrame = 0;
+            }
+            else
+            {
+                mCurrentFrame = mTotalFrames - 1;
+                mIsPlaying = false;
+                break;
+            }
+        }
+    }
+
+    // Update texture if frame changed
+    if (mCurrentFrame != mLastLoadedFrame)
+    {
+        // If preloaded, just swap texture pointer (instant)
+        if (!mFrameTextures.empty() && mCurrentFrame < (int)mFrameTextures.size())
+        {
+            mVolumeTexture = mFrameTextures[mCurrentFrame];
+            mLastLoadedFrame = mCurrentFrame;
+        }
+        // Otherwise load from disk (slow)
+        else if (loadFrameToTexture(mCurrentFrame, mVolumeTexture))
+        {
+            mLastLoadedFrame = mCurrentFrame;
+        }
+    }
+}
+
+void VolumeRenderer::setFrame(int frame)
+{
+    if (frame < 0) frame = 0;
+    if (frame >= mTotalFrames) frame = mTotalFrames - 1;
+
+    mCurrentFrame = frame;
+    mFrameTime = 0.0f;
+
+    if (mCurrentFrame != mLastLoadedFrame)
+    {
+        // If preloaded, just swap texture pointer (instant)
+        if (!mFrameTextures.empty() && mCurrentFrame < (int)mFrameTextures.size())
+        {
+            mVolumeTexture = mFrameTextures[mCurrentFrame];
+            mLastLoadedFrame = mCurrentFrame;
+        }
+        // Otherwise load from disk (slow)
+        else if (loadFrameToTexture(mCurrentFrame, mVolumeTexture))
+        {
+            mLastLoadedFrame = mCurrentFrame;
+        }
     }
 }
 
@@ -483,11 +871,24 @@ void VolumeRenderer::renderToShadowMap(const glm::mat4& lightSpaceMatrix, Shader
 
 void VolumeRenderer::shutdown()
 {
-    if (mVolumeTexture)
+    // Clean up preloaded frame textures
+    bool hadPreloadedFrames = !mFrameTextures.empty();
+    for (unsigned int tex : mFrameTextures)
+    {
+        if (tex != 0)
+        {
+            glDeleteTextures(1, &tex);
+        }
+    }
+    mFrameTextures.clear();
+
+    // Only delete mVolumeTexture if it wasn't part of preloaded frames
+    // (preloaded frames are already deleted above)
+    if (mVolumeTexture && !hadPreloadedFrames)
     {
         glDeleteTextures(1, &mVolumeTexture);
-        mVolumeTexture = 0;
     }
+    mVolumeTexture = 0;
 
     if (mBoundingBoxVAO)
     {
