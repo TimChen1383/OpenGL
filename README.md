@@ -1,4 +1,5 @@
 # OpenGL
+Practice with an OpenGL-based custom engine.
 
 #### VDB Fire
 ![fire](https://github.com/user-attachments/assets/e6c6de4a-5923-4886-9fef-5bf7cbe236b8)
