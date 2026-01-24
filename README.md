@@ -4,7 +4,7 @@ OpenGL-based custom engine practice. Engine folder is the main project folder. A
 #### VDB Fire (NanoVDB)
 ![fire](https://github.com/user-attachments/assets/e6c6de4a-5923-4886-9fef-5bf7cbe236b8)
 
-#### Physics (PhysX)
+#### Physics Simulation (PhysX)
 ![physics3](https://github.com/user-attachments/assets/17bd8cb1-87a9-4e74-8835-5fd1422bc6ef)
 
 #### Shadow
