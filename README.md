@@ -1,5 +1,5 @@
 # OpenGL
-OpenGL-based custom engine practice. Adding more features...
+OpenGL-based custom engine practice. Engine folder is the main project folder. Adding more features...
 
 #### VDB Fire (NanoVDB)
 ![fire](https://github.com/user-attachments/assets/e6c6de4a-5923-4886-9fef-5bf7cbe236b8)
