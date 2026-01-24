@@ -275,6 +275,7 @@ bool InitOpenGL()
 	glfwSetKeyCallback(gwindow, glfw_OnKey);
 	glfwSetCursorPosCallback(gwindow, glfw_onMouseMove);//Every time the mouse moves, this function is called
 	glfwSetScrollCallback(gwindow, glfw_onMouseScroll);
+	glfwSetFramebufferSizeCallback(gwindow, glfw_OnFrameBufferSize); // Handle window resize/fullscreen
 
 	glfwSetInputMode(gwindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);// Hide the cursor and capture it within the window
 	glfwSetCursorPos(gwindow, gWindowWidth/2.0f, gWindowHeight/2.0f);// Center the cursor in the window

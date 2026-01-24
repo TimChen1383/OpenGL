@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>D:\OpenGL\SpotLight\SpotLight\bin\SpotLight.exe</FullPath>
+      <FullPath>D:\GitHub\OpenGL\Spotlight\SpotLight\bin\SpotLight.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

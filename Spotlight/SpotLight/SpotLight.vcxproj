@@ -140,7 +140,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Common\includes\glm\detail\glm.cpp" />
-    <ClCompile Include="Common\includes\glm\glm.cppm" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />

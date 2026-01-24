@@ -1,10 +1,16 @@
 ﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(524,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
+  glm.cpp
+  Camera.cpp
   main.cpp
-D:\OpenGL\SpotLight\SpotLight\Common\includes\GLFW\glfw3.h(3173,1): warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+D:\GitHub\OpenGL\Spotlight\SpotLight\Common\includes\GLFW\glfw3.h(3173,1): warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
   (compiling source file 'Source/main.cpp')
   
-x64\Debug\glm.obj : warning LNK4042: object specified more than once; extras ignored
-glew32s.lib(glew.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'glew32s.lib(glew.obj)' or at 'D:\OpenGL\SpotLight\SpotLight\bin\vc120.pdb'; linking object as if no debug info
+  Mesh.cpp
+D:\GitHub\OpenGL\Spotlight\SpotLight\Source\Mesh.cpp(169,49): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+  ShaderProgram.cpp
+  Texture2D.cpp
+  Generating Code...
+glew32s.lib(glew.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'glew32s.lib(glew.obj)' or at 'D:\GitHub\OpenGL\Spotlight\SpotLight\bin\vc120.pdb'; linking object as if no debug info
 LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
 LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
 LINK : warning LNK4217: symbol '__glewBindBuffer' defined in 'glew32s.lib(glew.obj)' is imported by 'Mesh.obj' in function '"private: void __cdecl Mesh::initBuffer(void)" (?initBuffer@Mesh@@AEAAXXZ)'
@@ -36,4 +42,4 @@ LINK : warning LNK4217: symbol '__glewUniformMatrix4fv' defined in 'glew32s.lib(
 LINK : warning LNK4217: symbol '__glewUseProgram' defined in 'glew32s.lib(glew.obj)' is imported by 'ShaderProgram.obj' in function '"public: void __cdecl ShaderProgram::use(void)" (?use@ShaderProgram@@QEAAXXZ)'
 LINK : warning LNK4217: symbol '__glewActiveTexture' defined in 'glew32s.lib(glew.obj)' is imported by 'Texture2D.obj' in function '"public: void __cdecl Texture2D::bindTexture(unsigned int)" (?bindTexture@Texture2D@@QEAAXI@Z)'
 LINK : warning LNK4217: symbol '__glewGenerateMipmap' defined in 'glew32s.lib(glew.obj)' is imported by 'Texture2D.obj' in function '"public: bool __cdecl Texture2D::loadTexture(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,bool)" (?loadTexture@Texture2D@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N@Z)'
-  SpotLight.vcxproj -> D:\OpenGL\SpotLight\SpotLight\bin\SpotLight.exe
+  SpotLight.vcxproj -> D:\GitHub\OpenGL\Spotlight\SpotLight\bin\SpotLight.exe
